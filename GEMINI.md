@@ -19,6 +19,7 @@ This application is a Laravel application and its main Laravel ecosystems packag
 - phpunit/phpunit (PHPUNIT) - v12
 - @inertiajs/vue3 (INERTIA) - v2
 - tailwindcss (TAILWINDCSS) - v4
+- daisyui-blueprint (DAISYUI) - v0
 
 ## Conventions
 - You must follow all existing code conventions used in this application. When creating or editing a file, check sibling files for the correct structure, approach, and naming.
@@ -440,4 +441,10 @@ $pages->assertNoJavascriptErrors()->assertNoConsoleLogs();
 | overflow-ellipsis | text-ellipsis |
 | decoration-slice | box-decoration-slice |
 | decoration-clone | box-decoration-clone |
+=== task management rules ===
+
+## Task Completion
+- When working with task files in `.project/tasks/`, you MUST update the `# Status:` header to `[x] Complete` and mark all completion criteria as checked `[x]` before finishing the task.
+- You are NOT done until the corresponding `.project/tasks/*.md` file has been updated to reflect its completed status.
+
 </laravel-boost-guidelines>

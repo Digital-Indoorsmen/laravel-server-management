@@ -43,6 +43,15 @@ return [
             'transaction_mode' => 'DEFERRED',
             'page_size' => env('DB_PAGE_SIZE', 32768),
             'cache_size' => env('DB_CACHE_SIZE', -20000),
+            'pragmas' => [
+                'journal_mode' => env('DB_JOURNAL_MODE', 'WAL'),
+                'synchronous' => env('DB_SYNCHRONOUS', 'NORMAL'),
+                'cache_size' => env('DB_CACHE_SIZE', -20000),
+                'foreign_keys' => env('DB_FOREIGN_KEYS', 'ON'),
+                'busy_timeout' => env('DB_BUSY_TIMEOUT', 5000),
+                'temp_store' => 'MEMORY',
+                'mmap_size' => 2147483648,
+            ],
         ],
 
         'mysql' => [

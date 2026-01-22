@@ -21,9 +21,15 @@ class AppServiceProvider extends ServiceProvider
     {
         if (config('database.default') === 'sqlite') {
             $db = \Illuminate\Support\Facades\DB::connection()->getPdo();
-            $db->exec('PRAGMA mmap_size = 2147483648');
-            $db->exec('PRAGMA auto_vacuum = INCREMENTAL');
-            $db->exec('PRAGMA temp_store = MEMORY');
+            $pragmas = config('database.connections.sqlite.pragmas', []);
+
+            foreach ($pragmas as $key => $value) {
+                $db->exec("PRAGMA {$key} = {$value};");
+            }
         }
+
+        \App\Models\SshKey::observe(\App\Observers\ResourceObserver::class);
+        \App\Models\Server::observe(\App\Observers\ResourceObserver::class);
+        \App\Models\Site::observe(\App\Observers\ResourceObserver::class);
     }
 }

@@ -15,6 +15,18 @@
             "env": {
                 "SITE_PATH": "/Users/claybitner/Sites/laravel-server-mgmt"
             }
+        },
+        "daisyui-blueprint": {
+            "type": "stdio",
+            "command": "bunx",
+            "args": [
+                "-y",
+                "daisyui-blueprint@latest"
+            ],
+            "env": {
+                "LICENSE": "QBP08-VN3FW-MJYAH-FH7HH-4JA7M",
+                "EMAIL": "claybitner@gmail.com"
+            }
         }
     }
 }

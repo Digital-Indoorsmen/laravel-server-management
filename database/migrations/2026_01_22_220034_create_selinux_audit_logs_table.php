@@ -11,9 +11,12 @@ return new class extends Migration
      */
     public function up(): void
     {
-        Schema::create('initial_schema', function (Blueprint $table) {
-            $table->id();
-            $table->timestamps();
+        Schema::create('selinux_audit_logs', function (Blueprint $table) {
+            $table->ulid('id')->primary();
+            $table->string('log_level');
+            $table->text('message');
+            $table->json('context')->nullable();
+            $table->timestamp('created_at')->useCurrent();
         });
     }
 
@@ -22,6 +25,6 @@ return new class extends Migration
      */
     public function down(): void
     {
-        Schema::dropIfExists('initial_schema');
+        Schema::dropIfExists('selinux_audit_logs');
     }
 };
