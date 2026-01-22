@@ -1,4 +1,4 @@
-# Status: [ ] Not Complete
+# Status: [x] Complete
 # Title: AlmaLinux & Rocky Linux Base Setup Script - Services & Tools
 
 ## Description
@@ -43,15 +43,15 @@ fi
 
 ## Audit & Logging
 - Service installation verification (status check).
-- Initial health checks for port 80, 443, 3306, 5432.
+- Initial health checks for port 80, 443, 3306, 5432, 8095.
 
 ## Testing
-- Verify all services (`nginx`, `mariadb`, `php-fpm`) start on boot.
+- Verify all services (`nginx`, `mariadb`, `php-fpm`, `pgsql`, `redis`) start on boot.
 - Verify Bun is available in the `panel` user's shell.
 - Run script twice and ensure no redundant installation logs appear.
 
 ## Completion Criteria
-- [ ] All required services installed and operational
-- [ ] Idempotency confirmed for service installation
-- [ ] Directory structure created with correct permissions
-- [ ] Multi-PHP version support confirmed
+- [x] All required services installed and operational
+- [x] Idempotency confirmed for service installation
+- [x] Directory structure created with correct permissions
+- [x] Multi-PHP version support confirmed

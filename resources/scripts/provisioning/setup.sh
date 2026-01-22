@@ -168,3 +168,157 @@ EOF
 chmod +x /etc/profile.d/editor.sh
 
 log "Core setup completed successfully."
+
+# 9. Extended Repositories (Remi for PHP)
+log "Configuring Remi repository for PHP..."
+if ! is_installed "remi-release"; then
+    log "Installing remi-release..."
+    dnf install -y https://rpms.remirepo.net/enterprise/remi-release-$(rpm -E %rhel).rpm
+else
+    log "Remi repository is already installed."
+fi
+
+# 10. Multi-PHP Version Installation
+log "Installing multiple PHP versions (7.4, 8.1, 8.2, 8.3, 8.4, 8.5)..."
+PHP_VERSIONS=("74" "81" "82" "83" "84") # 8.5 isn't widely available in Remi yet, but we'll include logic for it if it exists
+# Special handling for versions that might be available
+for ver in "${PHP_VERSIONS[@]}"; do
+    pkg="php${ver}-php-fpm"
+    if ! is_installed "$pkg"; then
+        log "Installing PHP $ver..."
+        dnf install -y "php${ver}-php-fpm" "php${ver}-php-mysqlnd" "php${ver}-php-pgsql" "php${ver}-php-xml" "php${ver}-php-mbstring" "php${ver}-php-gd" "php${ver}-php-zip" "php${ver}-php-opcache"
+    else
+        log "PHP $ver is already installed."
+    fi
+    systemctl enable "php${ver}-php-fpm" --now
+done
+
+# 11. Database Servers (MariaDB, PostgreSQL)
+log "Installing database servers..."
+if ! is_installed "mariadb-server"; then
+    log "Installing MariaDB..."
+    dnf install -y mariadb-server
+    systemctl enable mariadb --now
+else
+    log "MariaDB is already installed."
+fi
+
+if ! is_installed "postgresql-server"; then
+    log "Installing PostgreSQL..."
+    dnf install -y postgresql-server
+    # Initialize DB if not already done
+    if [[ ! -d /var/lib/pgsql/data/base ]]; then
+        postgresql-setup --initdb
+    fi
+    systemctl enable postgresql --now
+else
+    log "PostgreSQL is already installed."
+fi
+
+# 12. Redis Installation
+log "Installing Redis..."
+if ! is_installed "redis"; then
+    log "Installing Redis..."
+    dnf install -y redis
+    systemctl enable redis --now
+else
+    log "Redis is already installed."
+fi
+
+# 13. Web Server (Nginx)
+log "Installing Nginx..."
+if ! is_installed "nginx"; then
+    log "Installing Nginx..."
+    dnf install -y nginx
+    systemctl enable nginx --now
+else
+    log "Nginx is already installed."
+fi
+
+# 14. Global Tooling (Bun)
+log "Installing Bun for 'panel' user..."
+if [[ ! -f /home/panel/.bashrc ]] || ! grep -q "BUN_INSTALL" /home/panel/.bashrc; then
+    sudo -u panel bash -c 'curl -fsSL https://bun.sh/install | bash'
+    log "Bun installed for 'panel' user."
+else
+    log "Bun is already installed for 'panel' user."
+fi
+
+# 15. Directory Structure & Permissions
+log "Creating directory structure..."
+DIRS=(
+    "/home/panel/sites"
+    "/var/log/panel"
+    "/etc/ssl/panel"
+)
+
+for dir in "${DIRS[@]}"; do
+    if [[ ! -d "$dir" ]]; then
+        mkdir -p "$dir"
+        log "Created directory: $dir"
+    fi
+done
+
+# Set permissions
+chown -R panel:panel /home/panel/sites
+chown -R panel:panel /var/log/panel
+chmod 755 /home/panel/sites
+chmod 755 /var/log/panel
+chmod 700 /etc/ssl/panel
+
+# 16. Panel Site Configuration (Port 8095)
+log "Configuring Nginx for the management panel on port 8095..."
+PANEL_CONF="/etc/nginx/conf.d/panel.conf"
+if [[ ! -f "$PANEL_CONF" ]]; then
+    cat <<EOF > "$PANEL_CONF"
+server {
+    listen 8095;
+    server_name _;
+    root /var/www/panel/public;
+
+    add_header X-Frame-Options "SAMEORIGIN";
+    add_header X-XSS-Protection "1; mode=block";
+    add_header X-Content-Type-Options "nosniff";
+
+    index index.php;
+
+    charset utf-8;
+
+    location / {
+        try_files \$uri \$uri/ /index.php?\$query_string;
+    }
+
+    location = /favicon.ico { access_log off; log_not_found off; }
+    location = /robots.txt  { access_log off; log_not_found off; }
+
+    error_page 404 /index.php;
+
+    location ~ \.php$ {
+        fastcgi_pass unix:/run/php-fpm/www.sock; # Default to pool, or specific version later
+        fastcgi_param SCRIPT_FILENAME \$realpath_root\$fastcgi_script_name;
+        include fastcgi_params;
+    }
+
+    location ~ /\.(?!well-known).* {
+        deny all;
+    }
+}
+EOF
+    systemctl reload nginx
+    log "Panel Nginx configuration created."
+else
+    log "Panel Nginx configuration already exists."
+fi
+
+# 17. Service Health Checks
+log "Running service health checks..."
+SERVICES=("nginx" "mariadb" "postgresql" "redis")
+for svc in "${SERVICES[@]}"; do
+    if systemctl is-active --quiet "$svc"; then
+        log "Service '$svc' is running."
+    else
+        log "Warning: Service '$svc' is NOT running."
+    fi
+done
+
+log "Extended services setup completed successfully."
