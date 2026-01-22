@@ -1,4 +1,4 @@
-# Status: [ ] Not Complete
+# Status: [x] Complete
 # Title: Create Tasks in .project/tasks folder
 
 ## Description

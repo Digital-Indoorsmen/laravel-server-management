@@ -2,25 +2,25 @@
 # Laravel-Based Server Management Panel (SpinupWP Alternative)
 
 ## Project Overview
-Build a self-hosted server management panel using Laravel 12, Inertia.js, and Vue.js that replicates SpinupWP functionality for AlmaLinux servers with full WordPress, Laravel, and PHP application support.
+Build a self-hosted server management panel using Laravel 12, Inertia.js, and Vue.js that replicates SpinupWP functionality for AlmaLinux and Rocky Linux servers with full WordPress, Laravel, and PHP application support.
 
 ## Architecture & Technology Stack
 
 ### Core Technologies
 - **Backend**: Laravel 12 (PHP 8.3+)
-- **Frontend**: Vue.js 3 + Inertia.js + Bun (default) / npm (optional)
+- **Frontend**: Vue.js 3 + Inertia.js + Bun (default) / bun (optional)
 - **CSS**: TailwindCSS with DaisyUI
 - **Database**: SQLite (primary for server management) + MariaDB (latest) + PostgreSQL (latest)
 - **Server Communication**: Laravel CLI Kit (SSH-based)
 - **Web Server**: Nginx with custom configurations
 - **SELinux**: Full support with proper context management
 
-### Server Requirements
-- AlmaLinux 8.x/9.x (RHEL-based)
+## Server Requirements
+- AlmaLinux 8.x/9.x or Rocky Linux 8.x/9.x (RHEL-based)
 - Minimum 2GB RAM, 20GB storage
 - SELinux enabled (targeted mode)
 - Firewalld configured
-- Multiple PHP versions (7.4, 8.0, 8.1, 8.2, 8.3, 8.4)
+- Multiple PHP versions (7.4, 8.0, 8.1, 8.2, 8.3, 8.4, 8.5)
 
 ## Core Features Breakdown
 
@@ -151,10 +151,10 @@ bun install
 bun run dev
 bun run build
 
-// npm commands (optional)
-npm install
-npm run dev
-npm run build
+// bun commands (optional)
+bun install
+bun run dev
+bun run build
 
 ## Database Schema Design
 
@@ -255,8 +255,8 @@ composer require grazulex/laravel-cli-kit
 // Install frontend dependencies with bun (default)
 bun install
 
-// Or with npm (user preference)
-npm install
+// Or with bun (user preference)
+bun install
 
 // Database setup
 php artisan migrate

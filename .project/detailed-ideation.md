@@ -464,8 +464,8 @@ install_nginx() {
     cat > /etc/nginx/conf.d/panel-template.conf << 'NGINX_EOF'
 # Panel Management Interface Template
 server {
-    listen 8080;
-    listen [::]:8080;
+    listen 8095;
+    listen [::]:8095;
     server_name localhost;
 
     root /var/www/panel/public;
@@ -587,8 +587,8 @@ configure_firewall() {
     firewall-cmd --permanent --add-service=http >> "\${SETUP_LOG}" 2>&1
     firewall-cmd --permanent --add-service=https >> "\${SETUP_LOG}" 2>&1
     
-    # Allow panel on port 8080 (adjust as needed)
-    firewall-cmd --permanent --add-port=8080/tcp >> "\${SETUP_LOG}" 2>&1
+    # Allow panel on port 8095 (adjust as needed)
+    firewall-cmd --permanent --add-port=8095/tcp >> "\${SETUP_LOG}" 2>&1
     
     firewall-cmd --reload >> "\${SETUP_LOG}" 2>&1
     
@@ -731,10 +731,10 @@ TESTING CONNECTIVITY
 ================================================================================
 
 Test Nginx:
-  curl http://localhost:8080/
+  curl http://localhost:8095/
 
 Test PHP-FPM:
-  curl http://localhost:8080/index.php (after panel deployment)
+  curl http://localhost:8095/index.php (after panel deployment)
 
 Test MariaDB:
   mysql -u root -p -e "SHOW DATABASES;"
@@ -752,7 +752,7 @@ FIREWALL RULES
 SSH:    Port 22 (allowed)
 HTTP:   Port 80 (allowed)
 HTTPS:  Port 443 (allowed)
-PANEL:  Port 8080 (allowed, adjust as needed)
+PANEL:  Port 8095 (allowed, adjust as needed)
 
 ================================================================================
 SUPPORT & TROUBLESHOOTING

@@ -82,7 +82,7 @@
 ### Technology Stack
 - **Framework**: Vue 3 + Inertia.js.
 - **Styling**: Tailwind CSS v4 + DaisyUI v5+.
-- **Package Manager**: Bun v1.3.6+ (default), npm (fallback).
+- **Package Manager**: Bun v1.3.6+ (default), bun (fallback).
 
 ### UI Components (DaisyUI Patterns)
 - **Monitoring**: `stat`, `progress`, and `badge` for server health and SELinux status.

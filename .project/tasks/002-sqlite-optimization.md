@@ -2,34 +2,62 @@
 # Title: SQLite Optimization & Database Configuration
 
 ## Description
-Configure and optimize the SQLite database used for the panel management system to ensure high performance and reliability.
+Configure and optimize the SQLite database used for the panel management system to ensure high performance and reliability. This includes enabling WAL mode and setting performance-oriented pragmas.
 
 ## Requirements
+- Update `config/database.php` to include a `pragmas` array for the `sqlite` connection.
 - Enable WAL (Write-Ahead Logging) mode.
-- Configure `page_size = 32768`.
-- Enable `auto_vacuum = INCREMENTAL`.
-- Configure `cache_size = -20000` (20 MB).
-- Set `mmap_size = 2147483648` (2 GB).
-- Configure `busy_timeout = 5000`.
-- Enable `foreign_keys = ON`.
-- Set `synchronous = NORMAL`.
-- Configure `temp_store = MEMORY`.
-- Update `config/database.php` in Laravel to apply these pragmas on every connection.
+- Configure performance pragmas:
+  - `journal_mode = WAL`
+  - `synchronous = NORMAL`
+  - `cache_size = -20000` (20 MB)
+  - `foreign_keys = ON`
+  - `busy_timeout = 5000`
+  - `temp_store = MEMORY`
+- Implement a bootstrap mechanism (e.g., in `App\Providers\AppServiceProvider`) to ensure these pragmas are applied to the connection.
+
+## Implementation Details
+### Example `config/database.php` update:
+```php
+'sqlite' => [
+    'driver' => 'sqlite',
+    'url' => env('DB_URL'),
+    'database' => env('DB_DATABASE', database_path('database.sqlite')),
+    'prefix' => '',
+    'foreign_key_constraints' => env('DB_FOREIGN_KEYS', true),
+],
+```
+
+### Example `AppServiceProvider::boot()` implementation:
+```php
+public function boot(): void
+{
+    if (config('database.default') === 'sqlite') {
+        $db = DB::connection()->getPdo();
+        $db->exec('PRAGMA journal_mode = WAL;');
+        $db->exec('PRAGMA synchronous = NORMAL;');
+        $db->exec('PRAGMA cache_size = -20000;');
+        $db->exec('PRAGMA foreign_keys = ON;');
+        $db->exec('PRAGMA busy_timeout = 5000;');
+        $db->exec('PRAGMA temp_store = MEMORY;');
+    }
+}
+```
 
 ## Configuration
 - SQLite 3
 - Laravel 12 Database Configuration
 
 ## Audit & Logging
-- Monitor `database.sqlite` file size.
-- Log database integrity checks.
+- Monitor `database.sqlite` file size periodically.
+- Log database integrity checks during application boot or via a scheduled task.
 
 ## Testing
-- Verify WAL mode is active in production.
-- Benchmark read/write performance under concurrent load.
+- Verify WAL mode is active: `PRAGMA journal_mode;` should return `wal`.
+- Benchmark read/write performance under concurrent load using `ab` or similar tool.
 
 ## Completion Criteria
 - [ ] SQLite optimized with all requested pragmas
-- [ ] Laravel `config/database.php` updated
-- [ ] AppServiceProvider applies pragmas on connection
-- [ ] Monitoring for database file size implemented
+- [ ] Laravel `config/database.php` reviewed
+- [ ] `AppServiceProvider` applies pragmas on connection
+- [ ] Verification command or test case confirms WAL mode is enabled
