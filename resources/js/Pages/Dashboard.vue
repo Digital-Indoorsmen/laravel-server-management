@@ -72,6 +72,15 @@ const services = [
         icon: BoltIcon,
     },
 ];
+
+const props = defineProps({
+    pendingServers: Array,
+});
+
+const getSetupCommand = (token) => {
+    const url = route("setup.script", { token }, true);
+    return `curl -sSL ${url} | sudo bash`;
+};
 </script>
 
 <template>
@@ -104,6 +113,39 @@ const services = [
                     >
                         Refresh Probes
                     </button>
+                </div>
+            </div>
+
+            <!-- Pending Servers / Provisioning Alerts -->
+            <div v-if="pendingServers && pendingServers.length > 0" class="space-y-4">
+                <div v-for="server in pendingServers" :key="server.id" class="card bg-warning/10 border border-warning/20 shadow-sm overflow-hidden">
+                    <div class="p-4 flex flex-col md:flex-row md:items-center justify-between gap-4">
+                        <div>
+                            <div class="flex items-center gap-2 text-warning">
+                                <span class="relative flex h-2 w-2">
+                                  <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-warning opacity-75"></span>
+                                  <span class="relative inline-flex rounded-full h-2 w-2 bg-warning"></span>
+                                </span>
+                                <h3 class="font-bold text-sm">Server Provisioning Required: {{ server.name }}</h3>
+                            </div>
+                            <p class="text-xs mt-1 opacity-70">Run the following command on your fresh AlmaLinux/Rocky Linux server to begin installation.</p>
+                        </div>
+                        <div class="flex-1 max-w-2xl">
+                            <div class="join w-full">
+                                <input readonly :value="getSetupCommand(server.setup_token)" class="input input-sm input-bordered join-item w-full font-mono text-[10px] bg-base-200" />
+                                <button
+                                    class="btn btn-sm btn-primary join-item"
+                                    @click="(e) => {
+                                        navigator.clipboard.writeText(getSetupCommand(server.setup_token));
+                                        e.target.innerText = 'Copied!';
+                                        setTimeout(() => e.target.innerText = 'Copy', 2000);
+                                    }"
+                                >
+                                    Copy
+                                </button>
+                            </div>
+                        </div>
+                    </div>
                 </div>
             </div>
 

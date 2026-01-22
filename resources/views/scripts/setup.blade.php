@@ -1,6 +1,8 @@
 #!/bin/bash
 
-# AlmaLinux & Rocky Linux Base Setup Script - Core & Hardening
+# AlmaLinux & Rocky Linux Base Setup Script - Managed by Panel
+# Server UUID: {{ $server->id }}
+# Callback URL: {{ $callbackUrl }}
 # Log file: /var/log/panel-setup.log
 
 set -euo pipefail
@@ -22,7 +24,11 @@ if [[ $EUID -ne 0 ]]; then
    exit 1
 fi
 
-log "Starting core setup script..."
+# Callback to panel that setup has started
+log "Notifying panel that setup has started..."
+curl -X POST -H "Content-Type: application/json" -d '{"status": "provisioning"}' "{{ $callbackUrl }}" || true
+
+log "Starting core setup script for server {{ $server->id }}..."
 
 # 1. OS Detection
 if [ -f /etc/os-release ]; then
@@ -325,10 +331,13 @@ log "Extended services setup completed successfully."
 
 # 18. SELinux Configuration
 log "Configuring SELinux..."
-if ! is_installed "policycoreutils-python-utils" && ! is_installed "policycoreutils-python-utils-2.9"; then
-    log "Installing policycoreutils-python-utils..."
-    dnf install -y policycoreutils-python-utils
-fi
+SE_UTILS=("policycoreutils-python-utils" "checkpolicy" "policycoreutils-devel" "make")
+for util in "${SE_UTILS[@]}"; do
+    if ! is_installed "$util"; then
+        log "Installing $util..."
+        dnf install -y "$util"
+    fi
+done
 
 # Set to permissive if not already
 CURRENT_SELINUX=$(getenforce)
@@ -347,6 +356,38 @@ if [[ ! -d "$POLICY_DIR" ]]; then
     mkdir -p "$POLICY_DIR"
     log "Created SELinux policy directory: $POLICY_DIR"
 fi
+
+# Deploy custom policy from panel
+log "Deploying custom panel security policy..."
+
+cat <<'SEEOF' > "$POLICY_DIR/panel.te"
+{{ file_get_contents(resource_path('selinux/panel.te')) }}
+SEEOF
+
+cat <<'SEEOF' > "$POLICY_DIR/panel.fc"
+{{ file_get_contents(resource_path('selinux/panel.fc')) }}
+SEEOF
+
+cat <<'SEEOF' > "$POLICY_DIR/panel.if"
+{{ file_get_contents(resource_path('selinux/panel.if')) }}
+SEEOF
+
+cat <<'SEEOF' > "$POLICY_DIR/Makefile"
+{{ file_get_contents(resource_path('selinux/Makefile')) }}
+SEEOF
+
+cd "$POLICY_DIR"
+log "Compiling and installing SELinux policy..."
+if make install; then
+    log "Panel SELinux policy installed successfully."
+    # Apply contexts to panel directories if they exist
+    if [[ -d /var/www/panel ]]; then
+        restorecon -Rv /var/www/panel
+    fi
+else
+    log "Error: Failed to install SELinux policy."
+fi
+cd - > /dev/null
 
 # 19. Firewalld Configuration
 log "Configuring Firewalld..."
@@ -401,4 +442,8 @@ log "Firewall Rules:"
 firewall-cmd --list-all | while read -r line; do log "  $line"; done
 log "Fail2ban Status: $(fail2ban-client status sshd 2>/dev/null | grep 'Status' -A 5 || echo 'Fail2ban jail status unavailable')"
 
-log "Security setup completed successfully."
+# Final callback to panel that setup is complete
+log "Notifying panel that setup is complete..."
+curl -X POST -H "Content-Type: application/json" -d '{"status": "ready"}' "{{ $callbackUrl }}" || true
+
+log "Security setup completed successfully. Server is ready."

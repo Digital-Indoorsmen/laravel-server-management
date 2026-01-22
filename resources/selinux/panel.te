@@ -1,0 +1,47 @@
+policy_module(panel, 1.0.0)
+
+########################################
+#
+# Declarations
+#
+
+type laravel_app_t;
+type laravel_app_exec_t;
+init_daemon_domain(laravel_app_t, laravel_app_exec_t)
+
+type laravel_php_fpm_t;
+type laravel_php_fpm_exec_t;
+init_daemon_domain(laravel_php_fpm_t, laravel_php_fpm_exec_t)
+
+type laravel_nginx_t;
+type laravel_nginx_exec_t;
+init_daemon_domain(laravel_nginx_t, laravel_nginx_exec_t)
+
+type laravel_ssh_key_t;
+type laravel_ssh_key_exec_t;
+init_daemon_domain(laravel_ssh_key_t, laravel_ssh_key_exec_t)
+
+type site_content_t;
+files_type(site_content_t)
+
+type laravel_app_rw_t;
+files_type(laravel_app_rw_t)
+
+########################################
+#
+# Local policy
+#
+
+# Allow Nginx to read site content
+allow laravel_nginx_t site_content_t:dir list_dir_perms;
+allow laravel_nginx_t site_content_t:file read_file_perms;
+
+# Allow PHP-FPM to read/write specific app paths
+allow laravel_php_fpm_t laravel_app_rw_t:dir rw_dir_perms;
+allow laravel_php_fpm_t laravel_app_rw_t:file rw_file_perms;
+
+# Permissive domains for development
+permissive laravel_app_t;
+permissive laravel_php_fpm_t;
+permissive laravel_nginx_t;
+permissive laravel_ssh_key_t;

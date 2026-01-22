@@ -1,0 +1,20 @@
+## <summary>Panel management policy</summary>
+
+########################################
+## <summary>
+##	Allow domain to read panel content.
+## </summary>
+## <param name="domain">
+##	<summary>
+##	Domain allowed access.
+##	</summary>
+## </param>
+#
+interface(`panel_read_content',`
+	gen_require(`
+		type site_content_t;
+	')
+
+	allow $1 site_content_t:dir list_dir_perms;
+	allow $1 site_content_t:file read_file_perms;
+')

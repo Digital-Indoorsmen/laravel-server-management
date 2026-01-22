@@ -1,0 +1,12 @@
+# Panel directory structure
+/var/www/panel(/.*)?              gen_context(system_u:object_r:site_content_t,s0)
+/var/www/panel/storage(/.*)?      gen_context(system_u:object_r:laravel_app_rw_t,s0)
+/var/www/panel/bootstrap/cache(/.*)? gen_context(system_u:object_r:laravel_app_rw_t,s0)
+/var/www/panel/public(/.*)?       gen_context(system_u:object_r:site_content_t,s0)
+
+# Managed sites
+/home/panel/sites/[^/]+/public(/.*)? gen_context(system_u:object_r:site_content_t,s0)
+/home/panel/sites/[^/]+/storage(/.*)? gen_context(system_u:object_r:laravel_app_rw_t,s0)
+
+# Binary contexts (placeholders for when we move logic to dedicated binaries if needed)
+/usr/bin/panel-ssh-manager         -- gen_context(system_u:object_r:laravel_ssh_key_exec_t,s0)

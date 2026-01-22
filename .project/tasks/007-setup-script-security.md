@@ -1,4 +1,4 @@
-# Status: [ ] Not Complete
+# Status: [x] Complete
 # Title: AlmaLinux & Rocky Linux Base Setup Script - SELinux & Firewall
 
 ## Description
@@ -41,6 +41,6 @@ firewall-cmd --reload
 - Attempt multiple failed SSH logins to verify Fail2ban (from a safe source).
 
 ## Completion Criteria
-- [ ] Security services configured and enabled
-- [ ] Firewall rules verified externally
-- [ ] Environment ready for SELinux Phase 0 testing (logging active)
+- [x] Security services configured and enabled
+- [x] Firewall rules verified externally
+- [x] Environment ready for SELinux Phase 0 testing (logging active)
