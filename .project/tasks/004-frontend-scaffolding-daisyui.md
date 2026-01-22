@@ -16,7 +16,7 @@ Scaffold the panel's frontend using modern technologies and the DaisyUI componen
   - **Main Content**: Responsive container with glassmorphism styling.
 - Implement a package manager selection UI (Bun vs bun) in user settings.
 - Create reusable UI components for:
-  - Server status indicators (`stat`, `badge`).
+  - Service status indicators (`stat`, `badge`).
   - SELinux violation alerts (`alert-error`).
   - Resource usage visualizations (`progress`).
 - Configure light/dark mode support via DaisyUI's `theme-controller`.
