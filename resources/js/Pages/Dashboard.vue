@@ -1,4 +1,6 @@
 <script setup>
+import { computed } from "vue";
+import { useForm } from "@inertiajs/vue3";
 import AppLayout from "@/Layouts/AppLayout.vue";
 import ServerStatus from "@/Components/UI/ServerStatus.vue";
 import SELinuxAlert from "@/Components/UI/SELinuxAlert.vue";
@@ -12,6 +14,7 @@ import {
     CircleStackIcon,
     BoltIcon,
     GlobeAltIcon,
+    KeyIcon,
 } from "@heroicons/vue/24/outline";
 
 // Local system health metrics (semi-hardcoded for now as placeholders for real probes)
@@ -74,12 +77,26 @@ const services = [
 ];
 
 const props = defineProps({
-    pendingServers: Array,
+    servers: Array,
+});
+
+const pendingServers = computed(() => {
+    return props.servers.filter((s) => !s.setup_completed_at);
+});
+
+const activeServers = computed(() => {
+    return props.servers.filter((s) => !!s.setup_completed_at);
 });
 
 const getSetupCommand = (token) => {
     const url = route("setup.script", { token }, true);
     return `curl -sSL ${url} | sudo bash`;
+};
+
+const testConnection = (id) => {
+    useForm({}).post(route("servers.test", { server: id }), {
+        preserveScroll: true,
+    });
 };
 </script>
 
@@ -116,30 +133,140 @@ const getSetupCommand = (token) => {
                 </div>
             </div>
 
+            <!-- Active Servers Management -->
+            <div v-if="activeServers.length > 0" class="space-y-4">
+                <div class="flex items-center justify-between">
+                    <h2 class="text-lg font-bold">Active Servers</h2>
+                </div>
+                <div
+                    class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4"
+                >
+                    <div
+                        v-for="server in activeServers"
+                        :key="server.id"
+                        class="card bg-base-100 border border-base-300 shadow-sm overflow-hidden"
+                    >
+                        <div class="p-4 space-y-4">
+                            <div class="flex items-center justify-between">
+                                <div class="flex items-center gap-2">
+                                    <div class="bg-primary/10 p-2 rounded-lg">
+                                        <ServerIcon
+                                            class="h-5 w-5 text-primary"
+                                        />
+                                    </div>
+                                    <div class="min-w-0">
+                                        <h3 class="font-bold truncate">
+                                            {{ server.name }}
+                                        </h3>
+                                        <p class="text-xs opacity-60 font-mono">
+                                            {{ server.ip_address }}
+                                        </p>
+                                    </div>
+                                </div>
+                                <ServerStatus :status="server.status" />
+                            </div>
+
+                            <div class="flex flex-wrap gap-2">
+                                <span class="badge badge-sm badge-outline">{{
+                                    server.os_version || "Detecting..."
+                                }}</span>
+                                <span
+                                    v-if="server.ssh_key"
+                                    class="badge badge-sm badge-success badge-outline gap-1"
+                                >
+                                    <KeyIcon class="h-3 w-3" />
+                                    {{ server.ssh_key.name }}
+                                </span>
+                                <span
+                                    v-else
+                                    class="badge badge-sm badge-error badge-outline gap-1"
+                                >
+                                    <KeyIcon class="h-3 w-3" />
+                                    No Key
+                                </span>
+                            </div>
+
+                            <div class="divider my-0"></div>
+
+                            <div class="flex justify-end gap-2">
+                                <button
+                                    class="btn btn-xs btn-outline btn-primary"
+                                    @click="testConnection(server.id)"
+                                    :disabled="!server.ssh_key"
+                                >
+                                    Test Connection
+                                </button>
+                                <Link
+                                    class="btn btn-xs btn-outline"
+                                    :href="route('servers.sites.index', server.id)"
+                                >
+                                    Manage
+                                </Link>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
             <!-- Pending Servers / Provisioning Alerts -->
-            <div v-if="pendingServers && pendingServers.length > 0" class="space-y-4">
-                <div v-for="server in pendingServers" :key="server.id" class="card bg-warning/10 border border-warning/20 shadow-sm overflow-hidden">
-                    <div class="p-4 flex flex-col md:flex-row md:items-center justify-between gap-4">
+            <div
+                v-if="pendingServers && pendingServers.length > 0"
+                class="space-y-4"
+            >
+                <div
+                    v-for="server in pendingServers"
+                    :key="server.id"
+                    class="card bg-warning/10 border border-warning/20 shadow-sm overflow-hidden"
+                >
+                    <div
+                        class="p-4 flex flex-col md:flex-row md:items-center justify-between gap-4"
+                    >
                         <div>
                             <div class="flex items-center gap-2 text-warning">
                                 <span class="relative flex h-2 w-2">
-                                  <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-warning opacity-75"></span>
-                                  <span class="relative inline-flex rounded-full h-2 w-2 bg-warning"></span>
+                                    <span
+                                        class="animate-ping absolute inline-flex h-full w-full rounded-full bg-warning opacity-75"
+                                    ></span>
+                                    <span
+                                        class="relative inline-flex rounded-full h-2 w-2 bg-warning"
+                                    ></span>
                                 </span>
-                                <h3 class="font-bold text-sm">Server Provisioning Required: {{ server.name }}</h3>
+                                <h3 class="font-bold text-sm">
+                                    Server Provisioning Required:
+                                    {{ server.name }}
+                                </h3>
                             </div>
-                            <p class="text-xs mt-1 opacity-70">Run the following command on your fresh AlmaLinux/Rocky Linux server to begin installation.</p>
+                            <p class="text-xs mt-1 opacity-70">
+                                Run the following command on your fresh
+                                AlmaLinux/Rocky Linux server to begin
+                                installation.
+                            </p>
                         </div>
                         <div class="flex-1 max-w-2xl">
                             <div class="join w-full">
-                                <input readonly :value="getSetupCommand(server.setup_token)" class="input input-sm input-bordered join-item w-full font-mono text-[10px] bg-base-200" />
+                                <input
+                                    readonly
+                                    :value="getSetupCommand(server.setup_token)"
+                                    class="input input-sm input-bordered join-item w-full font-mono text-[10px] bg-base-200"
+                                />
                                 <button
                                     class="btn btn-sm btn-primary join-item"
-                                    @click="(e) => {
-                                        navigator.clipboard.writeText(getSetupCommand(server.setup_token));
-                                        e.target.innerText = 'Copied!';
-                                        setTimeout(() => e.target.innerText = 'Copy', 2000);
-                                    }"
+                                    @click="
+                                        (e) => {
+                                            navigator.clipboard.writeText(
+                                                getSetupCommand(
+                                                    server.setup_token,
+                                                ),
+                                            );
+                                            e.target.innerText = 'Copied!';
+                                            setTimeout(
+                                                () =>
+                                                    (e.target.innerText =
+                                                        'Copy'),
+                                                2000,
+                                            );
+                                        }
+                                    "
                                 >
                                     Copy
                                 </button>

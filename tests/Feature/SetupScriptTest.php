@@ -15,7 +15,7 @@ it('renders the setup script with a valid token', function () {
 
     $response->assertStatus(200);
     $response->assertHeader('Content-Type', 'text/plain; charset=UTF-8');
-    $response->assertSee('Starting core setup script for server ' . $server->id);
+    $response->assertSee('Starting core setup script for server '.$server->id);
     $response->assertSee('test-token-123/callback');
 });
 

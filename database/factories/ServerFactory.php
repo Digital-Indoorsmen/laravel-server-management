@@ -17,7 +17,7 @@ class ServerFactory extends Factory
     public function definition(): array
     {
         return [
-            'name' => $this->faker->domainWord() . ' server',
+            'name' => $this->faker->domainWord().' server',
             'ip_address' => $this->faker->unique()->ipv4(),
             'hostname' => $this->faker->unique()->domainName(),
             'os_version' => 'almalinux 9.4',

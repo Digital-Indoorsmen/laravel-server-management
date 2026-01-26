@@ -11,12 +11,12 @@ return new class extends Migration
      */
     public function up(): void
     {
-        Schema::create('ssh_keys', function (Blueprint $table) {
-            $table->ulid('id')->primary();
-            $table->string('name');
-            $table->text('public_key');
-            $table->text('private_key')->nullable();
-            $table->string('fingerprint')->unique();
+        Schema::create('server_logs', function (Blueprint $table) {
+            $table->id();
+            $table->foreignUlid('server_id')->constrained()->cascadeOnDelete();
+            $table->string('level')->default('info');
+            $table->text('message');
+            $table->json('metadata')->nullable();
             $table->timestamps();
         });
     }
@@ -26,6 +26,6 @@ return new class extends Migration
      */
     public function down(): void
     {
-        Schema::dropIfExists('ssh_keys');
+        Schema::dropIfExists('server_logs');
     }
 };

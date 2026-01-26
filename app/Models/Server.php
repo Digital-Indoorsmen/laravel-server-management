@@ -9,7 +9,7 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 class Server extends Model
 {
-    use HasUlids, HasFactory;
+    use HasFactory, HasUlids;
 
     protected $guarded = [];
 
@@ -32,5 +32,15 @@ class Server extends Model
     public function sshKey(): BelongsTo
     {
         return $this->belongsTo(SshKey::class);
+    }
+
+    public function logs(): \Illuminate\Database\Eloquent\Relations\HasMany
+    {
+        return $this->hasMany(ServerLog::class);
+    }
+
+    public function sites(): \Illuminate\Database\Eloquent\Relations\HasMany
+    {
+        return $this->hasMany(Site::class);
     }
 }

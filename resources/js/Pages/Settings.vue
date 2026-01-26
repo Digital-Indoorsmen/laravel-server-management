@@ -5,6 +5,8 @@ import {
     Cog6ToothIcon,
     CommandLineIcon,
     CheckCircleIcon,
+    KeyIcon,
+    TrashIcon,
 } from "@heroicons/vue/24/outline";
 
 const props = defineProps({

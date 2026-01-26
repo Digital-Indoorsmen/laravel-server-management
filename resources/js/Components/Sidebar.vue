@@ -13,7 +13,12 @@ const navigation = [
     { name: "System", href: "#", icon: ServerIcon },
     { name: "Sites", href: "#", icon: GlobeAltIcon },
     { name: "Databases", href: "#", icon: CircleStackIcon },
-    { name: "SSH Keys", href: "#", icon: KeyIcon },
+    {
+        name: "SSH Keys",
+        href: route("ssh-keys.index"),
+        icon: KeyIcon,
+        component: "SshKeys/Index",
+    },
 ];
 </script>
 

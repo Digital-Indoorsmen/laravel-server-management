@@ -15,6 +15,7 @@ class SettingsController extends Controller
             'preferences' => auth()->user()->preference ?? [
                 'package_manager' => 'bun',
             ],
+            'sshKeys' => \App\Models\SshKey::latest()->get(),
         ]);
     }
 
