@@ -33,3 +33,27 @@ test('collect install options command outputs shell assignments', function () {
     putenv('PANEL_USE_SSL');
     putenv('PANEL_INSTALL_CERTBOT');
 });
+
+test('collect install options command can write shell assignments to a file', function () {
+    $outputFile = storage_path('framework/testing/install-options-shell.txt');
+
+    @unlink($outputFile);
+    putenv('PANEL_WEB_SERVER=nginx');
+    putenv('PANEL_DOMAIN=panel.example.test');
+
+    Artisan::call('panel:collect-install-options', [
+        '--shell-file' => $outputFile,
+        '--no-prompts' => true,
+    ]);
+
+    expect(file_exists($outputFile))->toBeTrue();
+
+    $contents = file_get_contents($outputFile);
+
+    expect($contents)->toContain("PANEL_WEB_SERVER='nginx'");
+    expect($contents)->toContain("PANEL_DOMAIN='panel.example.test'");
+
+    @unlink($outputFile);
+    putenv('PANEL_WEB_SERVER');
+    putenv('PANEL_DOMAIN');
+});

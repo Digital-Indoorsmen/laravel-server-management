@@ -16,7 +16,7 @@ it('includes a one-line AlmaLinux and Rocky installer script with critical setup
     expect($script)->toContain('PANEL_WEB_SERVER');
     expect($script)->toContain('PANEL_PROMPTS');
     expect($script)->toContain('PANEL_ADMIN_EMAIL');
-    expect($script)->toContain('artisan panel:collect-install-options --shell');
+    expect($script)->toContain('artisan panel:collect-install-options --shell-file="${prompt_output_file}" < /dev/tty');
     expect($script)->toContain('artisan panel:ensure-admin-user --shell');
     expect($script)->toContain('Writing Caddy config...');
     expect($script)->toContain('Writing Nginx vhost...');

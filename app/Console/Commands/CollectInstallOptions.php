@@ -19,6 +19,7 @@ class CollectInstallOptions extends Command
 {
     protected $signature = 'panel:collect-install-options
                             {--shell : Output shell variable assignments}
+                            {--shell-file= : Write shell variable assignments to a file}
                             {--no-prompts : Skip interactive prompts}';
 
     protected $description = 'Collect panel installer options using Laravel Prompts';
@@ -32,9 +33,17 @@ class CollectInstallOptions extends Command
         }
 
         $settings = $this->normalizeSettings($settings);
+        $shellAssignments = $this->toShellAssignments($settings);
+
+        $shellFile = $this->option('shell-file');
+        if (is_string($shellFile) && $shellFile !== '') {
+            file_put_contents($shellFile, $shellAssignments);
+
+            return self::SUCCESS;
+        }
 
         if ($this->option('shell')) {
-            $this->line($this->toShellAssignments($settings));
+            $this->line($shellAssignments);
 
             return self::SUCCESS;
         }

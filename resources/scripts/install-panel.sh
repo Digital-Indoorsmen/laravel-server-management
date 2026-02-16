@@ -266,7 +266,7 @@ fi
 log "Installing PHP dependencies..."
 run_as_panel "cd '${PANEL_APP_DIR}' && composer install --no-dev --optimize-autoloader --no-scripts"
 
-if [[ "${PANEL_PROMPTS}" == "1" && -t 0 && -t 1 ]]; then
+if [[ "${PANEL_PROMPTS}" == "1" && -t 1 && -r /dev/tty && -w /dev/tty ]]; then
     if [[ -z "${PANEL_WEB_SERVER}" ]]; then
         PANEL_WEB_SERVER="nginx"
     fi
@@ -284,8 +284,8 @@ if [[ "${PANEL_PROMPTS}" == "1" && -t 0 && -t 1 ]]; then
         PANEL_ADMIN_PASSWORD="${PANEL_ADMIN_PASSWORD}" \
         PANEL_USE_SSL="${PANEL_USE_SSL}" \
         PANEL_INSTALL_CERTBOT="${PANEL_INSTALL_CERTBOT}" \
-        "${php_bin}" artisan panel:collect-install-options --shell
-    ) > "${prompt_output_file}"; then
+        "${php_bin}" artisan panel:collect-install-options --shell-file="${prompt_output_file}" < /dev/tty
+    ); then
         # shellcheck disable=SC1090
         source "${prompt_output_file}"
     else
