@@ -69,7 +69,7 @@ class InstallerNoteRenderer extends Renderer
                         };
                     }, $letters);
                 })
-                ->flatMap(fn (array $letters): array => Lines::fromColumns($letters)->lines())
+                ->flatMap(fn (array $letters): array => Lines::fromColumns($letters)->lines()->all())
                 ->pipe(function ($lines) use ($width): void {
                     $this->centerHorizontally($lines->toArray(), $width)
                         ->each(function (string $line): void {
