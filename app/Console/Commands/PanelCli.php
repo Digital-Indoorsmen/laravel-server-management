@@ -21,6 +21,7 @@ class PanelCli extends Command
 {
     protected $signature = 'panel:cli
         {action? : status, update, new:site, or help}
+        {--dry-run : Preview update commands without executing them}
         {--server= : Target server id for new:site}
         {--domain= : Domain for new:site}
         {--system-user= : Linux system user for new:site}
@@ -129,15 +130,41 @@ class PanelCli extends Command
             ['php', 'artisan', 'config:cache'],
         ];
 
+        if ($this->option('dry-run')) {
+            $this->components->info('Dry run enabled. No commands will be executed.');
+
+            foreach ($commands as $command) {
+                $this->line('> '.implode(' ', $command));
+            }
+
+            return self::SUCCESS;
+        }
+
+        $repoOwner = $this->repositoryOwner();
+
+        if ($repoOwner !== null && $this->isRunningAsRoot() && $repoOwner !== 'root') {
+            $this->line("Using repository owner [{$repoOwner}] for update commands.");
+        }
+
         foreach ($commands as $command) {
             $this->line('> '.implode(' ', $command));
 
-            $process = new Process($command, base_path(), null, null, null);
-            $process->run(function (string $type, string $output): void {
-                $this->output->write($output);
-            });
+            $process = $this->runProcess($this->commandForExecution($command, $repoOwner), base_path());
+
+            if (! $process->isSuccessful() && $this->isDubiousOwnershipGitError($command, $process)) {
+                $safeDirectoryProcess = $this->runProcess(
+                    ['git', 'config', '--global', '--add', 'safe.directory', base_path()],
+                    base_path()
+                );
+
+                if ($safeDirectoryProcess->isSuccessful()) {
+                    $process = $this->runProcess($this->commandForExecution($command, $repoOwner), base_path());
+                }
+            }
 
             if (! $process->isSuccessful()) {
+                $this->output->write($process->getOutput());
+                $this->output->write($process->getErrorOutput());
                 $this->components->error('Update failed while running: '.implode(' ', $command));
 
                 return self::FAILURE;
@@ -147,6 +174,77 @@ class PanelCli extends Command
         $this->components->info('Panel update complete.');
 
         return self::SUCCESS;
+    }
+
+    /**
+     * @param  array<int, string>  $command
+     * @return array<int, string>
+     */
+    protected function commandForExecution(array $command, ?string $repoOwner): array
+    {
+        if (
+            $repoOwner !== null &&
+            $repoOwner !== '' &&
+            $repoOwner !== 'root' &&
+            $this->isRunningAsRoot()
+        ) {
+            return ['runuser', '-u', $repoOwner, '--', ...$command];
+        }
+
+        return $command;
+    }
+
+    protected function isRunningAsRoot(): bool
+    {
+        return function_exists('posix_geteuid') && posix_geteuid() === 0;
+    }
+
+    protected function repositoryOwner(): ?string
+    {
+        $path = base_path('.git');
+
+        if (! file_exists($path)) {
+            $path = base_path();
+        }
+
+        $ownerId = @fileowner($path);
+        if ($ownerId === false || ! function_exists('posix_getpwuid')) {
+            return null;
+        }
+
+        $owner = posix_getpwuid($ownerId);
+        if (! is_array($owner)) {
+            return null;
+        }
+
+        return $owner['name'] ?? null;
+    }
+
+    /**
+     * @param  array<int, string>  $command
+     */
+    protected function isDubiousOwnershipGitError(array $command, Process $process): bool
+    {
+        if (($command[0] ?? '') !== 'git') {
+            return false;
+        }
+
+        $errorOutput = $process->getErrorOutput().$process->getOutput();
+
+        return str_contains($errorOutput, 'detected dubious ownership');
+    }
+
+    /**
+     * @param  array<int, string>  $command
+     */
+    protected function runProcess(array $command, string $workingDirectory): Process
+    {
+        $process = new Process($command, $workingDirectory, null, null, null);
+        $process->run(function (string $type, string $output): void {
+            $this->output->write($output);
+        });
+
+        return $process;
     }
 
     protected function runNewSite(): int

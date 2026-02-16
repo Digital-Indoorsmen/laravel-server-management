@@ -81,3 +81,11 @@ it('creates a site from cli options without provisioning', function () {
         'type' => 'mariadb',
     ]);
 });
+
+it('can preview update commands without executing them', function () {
+    $this->artisan('panel:cli update --dry-run --no-interaction')
+        ->expectsOutputToContain('Dry run enabled. No commands will be executed.')
+        ->expectsOutputToContain('git fetch --all --prune')
+        ->expectsOutputToContain('bun run build')
+        ->assertSuccessful();
+});
