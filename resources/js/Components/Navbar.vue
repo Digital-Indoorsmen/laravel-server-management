@@ -111,7 +111,7 @@ const themes = [
                             {{ user.email }}
                         </p>
                     </div>
-                    <li><Link href="#" id="profile-link">Profile</Link></li>
+                    <li><Link :href="route('profile.show')" id="profile-link">Profile</Link></li>
                     <li>
                         <Link :href="route('settings.index')" id="settings-link"
                             >Settings</Link

@@ -1,5 +1,6 @@
 <script setup>
-import { Link } from "@inertiajs/vue3";
+import { computed } from "vue";
+import { usePage, Link } from "@inertiajs/vue3";
 import {
     Squares2X2Icon,
     ServerIcon,
@@ -8,18 +9,26 @@ import {
     KeyIcon,
 } from "@heroicons/vue/24/outline";
 
+const page = usePage();
+
+const currentUrl = computed(() => page.url);
+
 const navigation = [
-    { name: "Dashboard", href: route("dashboard"), icon: Squares2X2Icon },
-    { name: "System", href: "#", icon: ServerIcon },
-    { name: "Sites", href: "#", icon: GlobeAltIcon },
-    { name: "Databases", href: "#", icon: CircleStackIcon },
+    { name: "Dashboard", href: route("dashboard"), icon: Squares2X2Icon, startsWith: "/dashboard" },
+    { name: "System", href: route("system.index"), icon: ServerIcon, startsWith: "/system" },
+    { name: "Sites", href: route("sites.catalog"), icon: GlobeAltIcon, startsWith: "/sites" },
+    { name: "Databases", href: route("databases.index"), icon: CircleStackIcon, startsWith: "/databases" },
     {
         name: "SSH Keys",
         href: route("ssh-keys.index"),
         icon: KeyIcon,
-        component: "SshKeys/Index",
+        startsWith: "/ssh-keys",
     },
 ];
+
+const isActive = (startsWith) => {
+    return currentUrl.value === startsWith || currentUrl.value.startsWith(`${startsWith}/`);
+};
 </script>
 
 <template>
@@ -45,8 +54,7 @@ const navigation = [
                     :href="item.href"
                     class="flex items-center gap-3 px-3 py-2 rounded-lg hover:bg-base-300 transition-colors"
                     :class="{
-                        'bg-primary text-primary-content hover:bg-primary/90':
-                            $page.component === item.component,
+                        'bg-primary text-primary-content hover:bg-primary/90': isActive(item.startsWith),
                     }"
                     :title="item.name"
                 >
