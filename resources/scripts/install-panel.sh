@@ -172,7 +172,7 @@ if ! run_as_panel "command -v bun >/dev/null 2>&1"; then
 fi
 
 log "Installing PHP dependencies..."
-run_as_panel "cd '${PANEL_APP_DIR}' && composer install --no-dev --optimize-autoloader"
+run_as_panel "cd '${PANEL_APP_DIR}' && composer install --no-dev --optimize-autoloader --no-scripts"
 
 if [[ "${PANEL_PROMPTS}" == "1" && -t 0 && -t 1 ]]; then
     log "Launching Laravel Prompts installer wizard..."
@@ -255,6 +255,9 @@ set_env_value "${PANEL_APP_DIR}/.env" "QUEUE_CONNECTION" "database"
 touch "${PANEL_APP_DIR}/database/database.sqlite"
 chown "${PANEL_APP_USER}:${PANEL_APP_GROUP}" "${PANEL_APP_DIR}/database/database.sqlite"
 chmod 664 "${PANEL_APP_DIR}/database/database.sqlite"
+
+log "Discovering Laravel packages..."
+run_as_panel "cd '${PANEL_APP_DIR}' && ${php_bin} artisan package:discover --ansi"
 
 log "Running Laravel setup commands..."
 current_app_key="$(grep -E '^APP_KEY=' "${PANEL_APP_DIR}/.env" | tail -n1 | cut -d'=' -f2- || true)"

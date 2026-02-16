@@ -19,7 +19,8 @@ it('includes a one-line AlmaLinux and Rocky installer script with critical setup
     expect($script)->toContain('Writing Nginx vhost...');
     expect($script)->toContain('ensure_group_exists');
     expect($script)->toContain('APP_KEY already present; skipping key generation.');
-    expect($script)->toContain('composer install --no-dev --optimize-autoloader');
+    expect($script)->toContain('composer install --no-dev --optimize-autoloader --no-scripts');
+    expect($script)->toContain('artisan package:discover --ansi');
     expect($script)->toContain('bun run build');
     expect($script)->toContain('artisan migrate --force');
     expect($script)->toContain('laravel-queue.service');
