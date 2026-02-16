@@ -10,19 +10,19 @@
     },
     "devDependencies": {
         "@tailwindcss/vite": "^4.1.18",
-        "@vitejs/plugin-vue": "^6.0.3",
-        "axios": "^1.13.2",
+        "@vitejs/plugin-vue": "^6.0.4",
+        "axios": "^1.13.5",
         "concurrently": "^9.2.1",
-        "daisyui": "^5.5.14",
+        "daisyui": "^5.5.18",
         "laravel-vite-plugin": "^2.1.0",
         "tailwindcss": "^4.1.18",
         "vite": "^7.3.1",
-        "vue": "^3.5.27"
+        "vue": "^3.5.28"
     },
     "dependencies": {
         "@heroicons/vue": "^2.2.0",
-        "@inertiajs/vue3": "^2.3.11",
+        "@inertiajs/vue3": "^2.3.15",
         "prettier": "^3.8.1",
-        "ziggy-js": "^2.6.0"
+        "ziggy-js": "^2.6.1"
     }
 }
