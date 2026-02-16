@@ -84,20 +84,22 @@ run_as_panel() {
 install_js_dependencies_with_retries() {
     local bun_shell='export BUN_INSTALL="$HOME/.bun"; export PATH="$BUN_INSTALL/bin:$PATH";'
 
+    run_as_panel "${bun_shell} cd '${PANEL_APP_DIR}' && rm -rf node_modules"
     if run_as_panel "${bun_shell} cd '${PANEL_APP_DIR}' && bun install --frozen-lockfile"; then
         return 0
     fi
 
-    log "bun install --frozen-lockfile failed; clearing Bun cache and retrying..."
+    log "bun install --frozen-lockfile failed; clearing Bun cache and node_modules, then retrying..."
     run_as_panel "${bun_shell} rm -rf \"\$HOME/.bun/install/cache\" \"\$HOME/.cache/bun\""
+    run_as_panel "${bun_shell} cd '${PANEL_APP_DIR}' && rm -rf node_modules"
 
-    if run_as_panel "${bun_shell} cd '${PANEL_APP_DIR}' && bun install"; then
+    if run_as_panel "${bun_shell} cd '${PANEL_APP_DIR}' && bun install --frozen-lockfile --force --no-cache"; then
         return 0
     fi
 
-    log "bun install retry failed; clearing Bun cache and trying one final time..."
+    log "bun install retry failed; clearing Bun cache and node_modules, then trying one final time with --no-verify..."
     run_as_panel "${bun_shell} rm -rf \"\$HOME/.bun/install/cache\" \"\$HOME/.cache/bun\""
-    run_as_panel "${bun_shell} cd '${PANEL_APP_DIR}' && bun install"
+    run_as_panel "${bun_shell} cd '${PANEL_APP_DIR}' && rm -rf node_modules && bun install --frozen-lockfile --force --no-cache --no-verify"
 }
 
 build_js_assets_with_retry() {
