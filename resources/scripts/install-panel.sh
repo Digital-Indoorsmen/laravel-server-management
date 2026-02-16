@@ -143,7 +143,10 @@ if ! id -u "${PANEL_APP_USER}" >/dev/null 2>&1; then
 fi
 
 log "Preparing application directory..."
-mkdir -p "$(dirname "${PANEL_APP_DIR}")"
+clone_parent_dir="$(dirname "${PANEL_APP_DIR}")"
+mkdir -p "${clone_parent_dir}"
+chown "${PANEL_APP_USER}:${PANEL_APP_USER}" "${clone_parent_dir}"
+chmod 755 "${clone_parent_dir}"
 
 if [[ -d "${PANEL_APP_DIR}/.git" ]]; then
     log "Repository already exists; updating checkout..."
