@@ -177,6 +177,16 @@ class PanelHealthService
             $status = 'stopped';
         }
 
+        // Fall back to process checks when systemctl output is unavailable in the PHP runtime.
+        if ($status !== 'running' && in_array($systemdUnit, ['caddy', 'nginx', 'php-fpm'], true)) {
+            $processName = $systemdUnit === 'php-fpm' ? 'php-fpm' : $systemdUnit;
+            $hasProcess = $this->runCommand("pgrep -x {$processName}");
+
+            if ($hasProcess !== null) {
+                $status = 'running';
+            }
+        }
+
         $version = $this->runCommand($versionCommand) ?? 'Not installed';
         $version = preg_replace('/\s+/', ' ', trim($version)) ?: 'Not installed';
 

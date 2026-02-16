@@ -85,6 +85,18 @@ run_as_panel() {
     runuser -u "${PANEL_APP_USER}" -- bash -lc "${command}"
 }
 
+install_larapanel_cli() {
+    local target="/usr/local/bin/larapanel"
+
+    cat > "${target}" <<EOF
+#!/usr/bin/env bash
+set -euo pipefail
+exec ${php_bin} ${PANEL_APP_DIR}/artisan panel:cli "\$@"
+EOF
+
+    chmod 755 "${target}"
+}
+
 reset_and_set_fcontext() {
     local pattern="$1"
     local label="$2"
@@ -267,6 +279,8 @@ if [[ -d "${PANEL_APP_DIR}/.git" ]]; then
 else
     run_as_panel "git clone --branch '${PANEL_BRANCH}' '${PANEL_REPO}' '${PANEL_APP_DIR}'"
 fi
+
+install_larapanel_cli
 
 chown -R "${PANEL_APP_USER}:${PANEL_APP_USER}" "${PANEL_APP_DIR}"
 
