@@ -64,36 +64,9 @@ defineProps({
             >
                 {{ status }}
             </span>
-
-            <div class="dropdown dropdown-end">
-                <button tabindex="0" class="btn btn-ghost btn-xs btn-square">
-                    <svg
-                        xmlns="http://www.w3.org/2000/svg"
-                        fill="none"
-                        viewBox="0 0 24 24"
-                        stroke-width="1.5"
-                        stroke="currentColor"
-                        class="w-4 h-4"
-                    >
-                        <path
-                            stroke-linecap="round"
-                            stroke-linejoin="round"
-                            d="M12 6.75a.75.75 0 1 1 0-1.5.75.75 0 0 1 0 1.5ZM12 12.75a.75.75 0 1 1 0-1.5.75.75 0 0 1 0 1.5ZM12 18.75a.75.75 0 1 1 0-1.5.75.75 0 0 1 0 1.5Z"
-                        />
-                    </svg>
-                </button>
-                <ul
-                    tabindex="0"
-                    class="dropdown-content menu p-2 shadow-lg bg-base-100 border border-base-300 rounded-box w-32 z-30"
-                    :id="`service-actions-${name.toLowerCase().replace(/\s+/g, '-')}`"
-                >
-                    <li v-if="status !== 'running'"><a>Start</a></li>
-                    <li v-if="status === 'running'"><a>Restart</a></li>
-                    <li v-if="status === 'running'" class="text-error">
-                        <a>Stop</a>
-                    </li>
-                </ul>
-            </div>
+            <span class="text-[10px] uppercase tracking-wider opacity-40">
+                monitor
+            </span>
         </div>
     </div>
 </template>
