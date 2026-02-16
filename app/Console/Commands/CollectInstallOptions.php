@@ -88,7 +88,7 @@ class CollectInstallOptions extends Command
         Prompt::theme('installer');
 
         try {
-            intro('Laravel Server Management Installer');
+            intro('Laravel Server Manager Installer');
 
             $settings['PANEL_WEB_SERVER'] = select(
                 label: 'Which web server should host the panel?',
