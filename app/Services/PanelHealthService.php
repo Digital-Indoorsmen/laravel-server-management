@@ -4,12 +4,9 @@ namespace App\Services;
 
 class PanelHealthService
 {
-    /**
-     * @return array<int, array{name: string, value: int, unit: string}>
-     */
     public function systemStats(): array
     {
-        return [
+        $stats = [
             [
                 'name' => 'CPU Load',
                 'value' => $this->cpuLoadPercent(),
@@ -18,18 +15,40 @@ class PanelHealthService
             [
                 'name' => 'RAM Usage',
                 'value' => $this->memoryUsagePercent(),
-                'unit' => '%',
+                'unit' => '% '.$this->memoryUsageLabel(),
             ],
             [
-                'name' => 'Disk Space',
+                'name' => 'Disk Space (/)',
                 'value' => $this->diskUsagePercent('/'),
                 'unit' => '%',
             ],
-            [
-                'name' => 'Swap Usage',
-                'value' => $this->swapUsagePercent(),
+        ];
+
+        if ($this->isSeparateMount('/home')) {
+            $stats[] = [
+                'name' => 'Disk Space (/home)',
+                'value' => $this->diskUsagePercent('/home'),
                 'unit' => '%',
-            ],
+            ];
+        }
+
+        $stats[] = [
+            'name' => 'Swap Usage',
+            'value' => $this->swapUsagePercent(),
+            'unit' => '%',
+        ];
+
+        return $stats;
+    }
+
+    /**
+     * @return array<string, int>
+     */
+    public function resourceCounts(): array
+    {
+        return [
+            'Sites' => \App\Models\Site::count(),
+            'Databases' => \App\Models\Database::count(),
         ];
     }
 
@@ -38,13 +57,23 @@ class PanelHealthService
      */
     public function services(): array
     {
-        return [
-            $this->serviceStatus('nginx', 'Nginx Web Server', 'nginx', 'nginx -v'),
-            $this->serviceStatus('caddy', 'Caddy Web Server', 'caddy', 'caddy version'),
+        $services = [
+            $this->serviceStatus('nginx', 'Nginx Web Server', 'nginx', 'nginx -v 2>&1 | head -n 1'),
+            $this->serviceStatus('caddy', 'Caddy Web Server', 'caddy', 'caddy version | head -n 1'),
             $this->serviceStatus('php-fpm', 'PHP-FPM', 'php-fpm', 'php-fpm -v | head -n 1'),
-            $this->serviceStatus('firewalld', 'Firewalld', 'firewalld', 'firewall-cmd --version'),
-            $this->serviceStatus('supervisord', 'Supervisor', 'supervisord', 'supervisord --version'),
         ];
+
+        foreach (['mariadb' => 'MariaDB', 'mysql' => 'MySQL', 'postgresql' => 'PostgreSQL'] as $key => $name) {
+            $status = $this->serviceStatus($key, $name, $key, "{$key} --version 2>&1 | head -n 1");
+            if ($status['status'] !== 'not-installed') {
+                $services[] = $status;
+            }
+        }
+
+        $services[] = $this->serviceStatus('firewalld', 'Firewalld', 'firewalld', 'firewall-cmd --version');
+        $services[] = $this->serviceStatus('supervisord', 'Supervisor', 'supervisord', 'supervisord --version');
+
+        return $services;
     }
 
     /**
@@ -90,9 +119,40 @@ class PanelHealthService
 
     private function memoryUsagePercent(): int
     {
+        $mem = $this->getMemoryInfo();
+        if ($mem['total'] <= 0) {
+            return 0;
+        }
+
+        $usedKb = max($mem['total'] - $mem['available'], 0);
+
+        return (int) min(100, round(($usedKb / $mem['total']) * 100));
+    }
+
+    private function memoryUsageLabel(): string
+    {
+        $mem = $this->getMemoryInfo();
+        if ($mem['total'] <= 0) {
+            return '';
+        }
+
+        $usedKb = max($mem['total'] - $mem['available'], 0);
+
+        $format = fn (int $kb): string => $kb > 1048576
+            ? round($kb / 1048576, 1).'GB'
+            : round($kb / 1024, 0).'MB';
+
+        return '('.$format($usedKb).' / '.$format($mem['total']).')';
+    }
+
+    /**
+     * @return array{total: int, available: int}
+     */
+    private function getMemoryInfo(): array
+    {
         $memoryInfo = @file('/proc/meminfo', FILE_IGNORE_NEW_LINES | FILE_SKIP_EMPTY_LINES);
         if ($memoryInfo === false) {
-            return 0;
+            return ['total' => 0, 'available' => 0];
         }
 
         $totalKb = 0;
@@ -108,13 +168,7 @@ class PanelHealthService
             }
         }
 
-        if ($totalKb <= 0) {
-            return 0;
-        }
-
-        $usedKb = max($totalKb - $availableKb, 0);
-
-        return (int) min(100, round(($usedKb / $totalKb) * 100));
+        return ['total' => $totalKb, 'available' => $availableKb];
     }
 
     private function swapUsagePercent(): int
@@ -157,7 +211,34 @@ class PanelHealthService
 
         $used = max($total - $free, 0);
 
-        return (int) min(100, round(($used / $total) * 100));
+        return (int) min(100, ceil(($used / $total) * 100));
+    }
+
+    private function isSeparateMount(string $path): bool
+    {
+        if (! is_dir($path)) {
+            return false;
+        }
+
+        $rootDev = @file_get_contents('/proc/self/mountinfo');
+        if ($rootDev === false) {
+            // Fallback to checking if device IDs are different
+            $rootStat = @stat('/');
+            $pathStat = @stat($path);
+
+            return $rootStat && $pathStat && $rootStat['dev'] !== $pathStat['dev'];
+        }
+
+        // More reliable way to check mount points on Linux
+        $mounts = explode("\n", $rootDev);
+        foreach ($mounts as $mount) {
+            $parts = preg_split('/\s+/', $mount);
+            if (isset($parts[4]) && $parts[4] === $path) {
+                return true;
+            }
+        }
+
+        return false;
     }
 
     /**
@@ -165,6 +246,9 @@ class PanelHealthService
      */
     private function serviceStatus(string $key, string $name, string $systemdUnit, string $versionCommand): array
     {
+        $version = $this->runCommand($versionCommand);
+        $version = preg_replace('/\s+/', ' ', trim($version ?? '')) ?: null;
+
         $activeState = $this->runCommand("systemctl is-active {$systemdUnit}");
         $status = match ($activeState) {
             'active' => 'running',
@@ -177,7 +261,7 @@ class PanelHealthService
             $status = 'stopped';
         }
 
-        // Fall back to process checks when systemctl output is unavailable in the PHP runtime.
+        // Fall back to process checks when systemctl output is unavailable or unreliable.
         if ($status !== 'running' && in_array($systemdUnit, ['caddy', 'nginx', 'php-fpm'], true)) {
             $processName = $systemdUnit === 'php-fpm' ? 'php-fpm' : $systemdUnit;
             $hasProcess = $this->runCommand("pgrep -x {$processName}");
@@ -187,8 +271,10 @@ class PanelHealthService
             }
         }
 
-        $version = $this->runCommand($versionCommand) ?? 'Not installed';
-        $version = preg_replace('/\s+/', ' ', trim($version)) ?: 'Not installed';
+        if ($version === null) {
+            $status = 'not-installed';
+            $version = 'Not installed';
+        }
 
         return [
             'key' => $key,

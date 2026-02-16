@@ -40,6 +40,14 @@ it('shows status output successfully', function () {
             ];
         }
 
+        public function resourceCounts(): array
+        {
+            return [
+                'Sites' => 1,
+                'Databases' => 1,
+            ];
+        }
+
         public function security(): array
         {
             return [

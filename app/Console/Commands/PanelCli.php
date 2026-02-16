@@ -107,12 +107,14 @@ class PanelCli extends Command
             ->all();
 
         $security = $this->panelHealth->security();
+        $resources = $this->panelHealth->resourceCounts();
 
         $this->line('');
         $this->line('Uptime: '.$this->panelHealth->uptime());
         $this->line('SELinux: '.$security['selinux_mode']);
         $this->line('Firewall: '.($security['firewall_active'] ? 'active' : 'inactive'));
         $this->line('Firewall services: '.(count($security['firewall_services']) > 0 ? implode(', ', $security['firewall_services']) : 'none'));
+        $this->line('Managed: '.$resources['Sites'].' sites, '.$resources['Databases'].' databases');
         $this->line('');
 
         $this->table(['Metric', 'Value'], $stats);
