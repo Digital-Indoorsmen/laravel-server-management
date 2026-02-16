@@ -316,6 +316,8 @@ set_env_value "${PANEL_APP_DIR}/.env" "QUEUE_CONNECTION" "database"
 touch "${PANEL_APP_DIR}/database/database.sqlite"
 chown "${PANEL_APP_USER}:${PANEL_APP_GROUP}" "${PANEL_APP_DIR}/database/database.sqlite"
 chmod 664 "${PANEL_APP_DIR}/database/database.sqlite"
+chown -R "${PANEL_APP_USER}:${PANEL_APP_GROUP}" "${PANEL_APP_DIR}/database"
+chmod 775 "${PANEL_APP_DIR}/database"
 
 log "Discovering Laravel packages..."
 run_as_panel "cd '${PANEL_APP_DIR}' && ${php_bin} artisan package:discover --ansi"
@@ -365,6 +367,7 @@ run_as_panel "cd '${PANEL_APP_DIR}' && ${php_bin} artisan config:cache"
 log "Setting runtime permissions..."
 chown -R "${PANEL_APP_USER}:${PANEL_APP_GROUP}" "${PANEL_APP_DIR}"
 chmod -R 775 "${PANEL_APP_DIR}/storage" "${PANEL_APP_DIR}/bootstrap/cache"
+chmod 775 "${PANEL_APP_DIR}/database"
 
 log "Configuring PHP-FPM socket for ${PANEL_WEB_SERVER}..."
 sed -i "s/^user = .*/user = ${PANEL_WEB_SERVER}/" /etc/php-fpm.d/www.conf
@@ -451,6 +454,7 @@ fi
 log "Configuring SELinux and firewall..."
 semanage fcontext -a -t httpd_sys_rw_content_t "${PANEL_APP_DIR}/storage(/.*)?" || semanage fcontext -m -t httpd_sys_rw_content_t "${PANEL_APP_DIR}/storage(/.*)?"
 semanage fcontext -a -t httpd_sys_rw_content_t "${PANEL_APP_DIR}/bootstrap/cache(/.*)?" || semanage fcontext -m -t httpd_sys_rw_content_t "${PANEL_APP_DIR}/bootstrap/cache(/.*)?"
+semanage fcontext -a -t httpd_sys_rw_content_t "${PANEL_APP_DIR}/database(/.*)?" || semanage fcontext -m -t httpd_sys_rw_content_t "${PANEL_APP_DIR}/database(/.*)?"
 if [[ "${PANEL_WEB_SERVER}" == "caddy" ]]; then
     semanage fcontext -a -t httpd_config_t "/etc/caddy(/.*)?" || semanage fcontext -m -t httpd_config_t "/etc/caddy(/.*)?"
     semanage fcontext -a -t httpd_sys_rw_content_t "/run/php-fpm(/.*)?" || semanage fcontext -m -t httpd_sys_rw_content_t "/run/php-fpm(/.*)?"

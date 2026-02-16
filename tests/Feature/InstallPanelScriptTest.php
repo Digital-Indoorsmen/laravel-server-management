@@ -34,6 +34,8 @@ it('includes a one-line AlmaLinux and Rocky installer script with critical setup
     expect($script)->toContain('bun install --frozen-lockfile --force --no-cache --no-verify');
     expect($script)->toContain('bun run build failed; retrying once...');
     expect($script)->toContain('Panel admin email: ${PANEL_ADMIN_EMAIL}');
+    expect($script)->toContain('chmod 775 "${PANEL_APP_DIR}/database"');
+    expect($script)->toContain('semanage fcontext -a -t httpd_sys_rw_content_t "${PANEL_APP_DIR}/database(/.*)?"');
     expect($script)->toContain('artisan migrate --force');
     expect($script)->toContain('laravel-queue.service');
 });
