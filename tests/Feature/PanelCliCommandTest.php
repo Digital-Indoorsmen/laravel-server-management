@@ -1,8 +1,14 @@
 <?php
 
+use App\Console\Commands\PanelCli;
+use App\Jobs\RunSiteDeployment;
 use App\Models\Server;
+use App\Models\Site;
 use App\Services\PanelHealthService;
+use App\Services\SiteDeploymentService;
+use App\Services\SiteProvisioningService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\Queue;
 
 uses(RefreshDatabase::class);
 
@@ -88,4 +94,66 @@ it('can preview update commands without executing them', function () {
         ->expectsOutputToContain('git fetch --all --prune')
         ->expectsOutputToContain('bun run build')
         ->assertSuccessful();
+});
+
+it('wraps root-run update commands in owner shell with bun-aware environment', function () {
+    $command = new class(app(PanelHealthService::class), app(SiteProvisioningService::class), app(SiteDeploymentService::class)) extends PanelCli
+    {
+        protected function isRunningAsRoot(): bool
+        {
+            return true;
+        }
+
+        /**
+         * @param  array<int, string>  $command
+         * @return array<int, string>
+         */
+        public function exposedCommandForExecution(array $command, ?string $repoOwner): array
+        {
+            return $this->commandForExecution($command, $repoOwner);
+        }
+    };
+
+    $wrapped = $command->exposedCommandForExecution(['bun', 'install', '--frozen-lockfile'], 'panel');
+
+    expect($wrapped[0])->toBe('runuser')
+        ->and($wrapped[4])->toBe('bash')
+        ->and($wrapped[5])->toBe('-lc')
+        ->and($wrapped[6])->toContain('export BUN_INSTALL="$HOME/.bun";')
+        ->and($wrapped[6])->toContain('export PATH="$BUN_INSTALL/bin:$PATH";')
+        ->and($wrapped[6])->toContain("'bun' 'install' '--frozen-lockfile'");
+});
+
+it('queues a site deployment from cli', function () {
+    Queue::fake();
+
+    $server = Server::factory()->create([
+        'name' => 'CLI Deploy Server',
+        'status' => 'active',
+        'web_server' => 'nginx',
+    ]);
+
+    $site = Site::query()->create([
+        'server_id' => $server->id,
+        'domain' => 'cli-deploy.test',
+        'document_root' => '/home/cli_deploy/public_html/public',
+        'system_user' => 'cli_deploy',
+        'php_version' => '8.4',
+        'app_type' => 'laravel',
+        'web_server' => 'nginx',
+        'status' => 'active',
+    ]);
+
+    $this->artisan("panel:cli site:deploy {$site->id} --branch=main --no-interaction")
+        ->expectsOutputToContain('queued')
+        ->assertSuccessful();
+
+    $this->assertDatabaseHas('deployments', [
+        'site_id' => $site->id,
+        'triggered_via' => 'cli',
+        'branch' => 'main',
+        'status' => 'queued',
+    ]);
+
+    Queue::assertPushed(RunSiteDeployment::class);
 });

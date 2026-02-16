@@ -2,9 +2,11 @@
 
 namespace App\Console\Commands;
 
+use App\Jobs\RunSiteDeployment;
 use App\Models\Server;
 use App\Models\Site;
 use App\Services\PanelHealthService;
+use App\Services\SiteDeploymentService;
 use App\Services\SiteProvisioningService;
 use Illuminate\Console\Command;
 use Illuminate\Support\Facades\DB;
@@ -20,8 +22,10 @@ use function Laravel\Prompts\text;
 class PanelCli extends Command
 {
     protected $signature = 'panel:cli
-        {action? : status, update, new:site, or help}
+        {action? : status, update, new:site, site:deploy, or help}
+        {target? : Site id for site:deploy}
         {--dry-run : Preview update commands without executing them}
+        {--branch=main : Branch to deploy for site:deploy}
         {--server= : Target server id for new:site}
         {--domain= : Domain for new:site}
         {--system-user= : Linux system user for new:site}
@@ -32,11 +36,12 @@ class PanelCli extends Command
         {--database-type= : Database type for new:site}
         {--provision=1 : Run provisioning after creating site (0/1)}';
 
-    protected $description = 'Panel CLI entrypoint for status, updates, and site creation';
+    protected $description = 'Panel CLI entrypoint for status, updates, site creation, and deployments';
 
     public function __construct(
         protected PanelHealthService $panelHealth,
-        protected SiteProvisioningService $siteProvisioning
+        protected SiteProvisioningService $siteProvisioning,
+        protected SiteDeploymentService $siteDeploymentService
     ) {
         parent::__construct();
     }
@@ -49,7 +54,7 @@ class PanelCli extends Command
             return $this->showAvailableCommands();
         }
 
-        if (! in_array($action, ['status', 'update', 'new:site', 'help'], true)) {
+        if (! in_array($action, ['status', 'update', 'new:site', 'site:deploy', 'help'], true)) {
             $this->components->error("Unknown action [{$action}].");
 
             return $this->showAvailableCommands(self::FAILURE);
@@ -60,6 +65,7 @@ class PanelCli extends Command
             'status' => $this->runStatus(),
             'update' => $this->runUpdate(),
             'new:site' => $this->runNewSite(),
+            'site:deploy' => $this->runSiteDeploy(),
             default => self::FAILURE,
         };
     }
@@ -72,6 +78,7 @@ class PanelCli extends Command
             ['larapanel status', 'Show host, panel, and service status'],
             ['larapanel update', 'Update panel software and rebuild assets'],
             ['larapanel new:site', 'Create and optionally provision a new site'],
+            ['larapanel site:deploy {site}', 'Queue a deployment for a specific site'],
             ['larapanel help', 'Show this command list'],
         ]);
 
@@ -188,10 +195,23 @@ class PanelCli extends Command
             $repoOwner !== 'root' &&
             $this->isRunningAsRoot()
         ) {
-            return ['runuser', '-u', $repoOwner, '--', ...$command];
+            return ['runuser', '-u', $repoOwner, '--', 'bash', '-lc', $this->commandForOwnerShell($command)];
         }
 
         return $command;
+    }
+
+    /**
+     * @param  array<int, string>  $command
+     */
+    protected function commandForOwnerShell(array $command): string
+    {
+        $escapedCommand = implode(' ', array_map(static fn (string $part): string => escapeshellarg($part), $command));
+
+        return 'export PATH="/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin"; '.
+            'export BUN_INSTALL="$HOME/.bun"; '.
+            'export PATH="$BUN_INSTALL/bin:$PATH"; '.
+            $escapedCommand;
     }
 
     protected function isRunningAsRoot(): bool
@@ -442,5 +462,45 @@ class PanelCli extends Command
         $raw = $this->input->getParameterOption("--{$option}");
 
         return $raw !== false;
+    }
+
+    protected function runSiteDeploy(): int
+    {
+        $siteId = (string) ($this->argument('target') ?? '');
+
+        if ($siteId === '') {
+            $this->components->error('Site id is required. Usage: larapanel site:deploy {site} [--branch=main].');
+
+            return self::FAILURE;
+        }
+
+        $site = Site::query()->find($siteId);
+
+        if (! $site) {
+            $this->components->error("Site [{$siteId}] was not found.");
+
+            return self::FAILURE;
+        }
+
+        $branch = (string) ($this->option('branch') ?? 'main');
+
+        if (! preg_match('/^[A-Za-z0-9._\/-]+$/', $branch)) {
+            $this->components->error('Invalid branch format.');
+
+            return self::FAILURE;
+        }
+
+        $deployment = $this->siteDeploymentService->queue(
+            site: $site,
+            actorId: null,
+            triggeredVia: 'cli',
+            branch: $branch,
+        );
+
+        RunSiteDeployment::dispatch($deployment->id)->onQueue('deployments');
+
+        $this->components->info("Deployment {$deployment->id} queued for {$site->domain} on branch {$branch}.");
+
+        return self::SUCCESS;
     }
 }

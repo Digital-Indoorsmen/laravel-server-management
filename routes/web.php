@@ -39,5 +39,18 @@ Route::middleware('auth')->group(function (): void {
     Route::resource('servers.sites', App\Http\Controllers\SiteController::class)->shallow();
     Route::get('/sites/{site}/env', [App\Http\Controllers\SiteController::class, 'env'])->name('sites.env');
     Route::put('/sites/{site}/env', [App\Http\Controllers\SiteController::class, 'updateEnv'])->name('sites.env.update');
+    Route::prefix('/sites/{site}/workspace')->name('sites.workspace.')->group(function (): void {
+        Route::get('/', [App\Http\Controllers\SiteWorkspaceController::class, 'overview'])->name('index');
+        Route::get('/overview', [App\Http\Controllers\SiteWorkspaceController::class, 'overview'])->name('overview');
+        Route::get('/deployments', [App\Http\Controllers\SiteDeploymentController::class, 'index'])->name('deployments');
+        Route::post('/deployments', [App\Http\Controllers\SiteDeploymentController::class, 'store'])->name('deployments.store');
+        Route::get('/deployments/{deployment}', [App\Http\Controllers\SiteDeploymentController::class, 'show'])->name('deployments.show');
+        Route::get('/processes', [App\Http\Controllers\SiteWorkspaceController::class, 'processes'])->name('processes');
+        Route::get('/commands', [App\Http\Controllers\SiteWorkspaceController::class, 'commands'])->name('commands');
+        Route::get('/network', [App\Http\Controllers\SiteWorkspaceController::class, 'network'])->name('network');
+        Route::get('/observe', [App\Http\Controllers\SiteWorkspaceController::class, 'observe'])->name('observe');
+        Route::get('/domains', [App\Http\Controllers\SiteWorkspaceController::class, 'domains'])->name('domains');
+        Route::get('/settings', [App\Http\Controllers\SiteWorkspaceController::class, 'settings'])->name('settings');
+    });
     Route::post('/logout', [App\Http\Controllers\Auth\AuthenticatedSessionController::class, 'destroy'])->name('logout');
 });

@@ -22,4 +22,9 @@ class Site extends Model
     {
         return $this->hasMany(Database::class);
     }
+
+    public function deployments(): HasMany
+    {
+        return $this->hasMany(Deployment::class);
+    }
 }

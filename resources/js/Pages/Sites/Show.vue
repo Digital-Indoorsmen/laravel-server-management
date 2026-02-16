@@ -75,6 +75,7 @@ defineProps({
                             <h2 class="card-title text-sm uppercase tracking-wider opacity-60">Environment</h2>
                             <p class="text-sm opacity-70">Manage environment variables (.env).</p>
                             <div class="card-actions justify-end">
+                                <Link :href="route('sites.workspace.overview', site.id)" class="btn btn-sm btn-primary">Open Workspace</Link>
                                 <Link :href="route('sites.env', site.id)" class="btn btn-sm btn-outline">Edit .env</Link>
                             </div>
                         </div>
