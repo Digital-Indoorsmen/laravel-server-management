@@ -137,6 +137,8 @@ runuser -u panel -- bash -lc 'curl -fsSL https://bun.sh/install | bash'
 runuser -u panel -- bash -lc 'export BUN_INSTALL="$HOME/.bun"; export PATH="$BUN_INSTALL/bin:$PATH"; bun --version'
 ```
 
+If `bun` works as `root` but fails as `panel` (for example `runuser: failed to execute bun: Permission denied`), rerun the bootstrap installer. It now validates Bun in the `panel` runtime context and repairs common path/permission issues idempotently.
+
 ## 6. Install PHP and JS Dependencies
 
 ```bash
@@ -392,6 +394,8 @@ runuser -u panel -- bash -lc 'export BUN_INSTALL="$HOME/.bun"; export PATH="$BUN
 runuser -u panel -- bash -lc 'cd /var/www/laravel-server-management && php artisan migrate --force && php artisan config:cache'
 systemctl restart laravel-queue php-fpm nginx
 ```
+
+You can also run `larapanel update`. If an older installation has broken Bun paths/permissions, rerun the bootstrap installer; reruns are safe and repair-oriented.
 
 ## Local Development (Quick Reference)
 

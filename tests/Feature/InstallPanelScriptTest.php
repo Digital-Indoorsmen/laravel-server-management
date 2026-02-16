@@ -30,6 +30,9 @@ it('includes a one-line AlmaLinux and Rocky installer script with critical setup
     expect($script)->toContain('configure_service_control_sudoers');
     expect($script)->toContain('install_js_dependencies_with_retries');
     expect($script)->toContain('build_js_assets_with_retry');
+    expect($script)->toContain('bun_is_usable_for_panel');
+    expect($script)->toContain('ensure_bun_runtime');
+    expect($script)->toContain('BUN_SHELL_ENV');
     expect($script)->toContain('disable_conflicting_web_server');
     expect($script)->toContain('reset_php_fpm_runtime_selinux_contexts');
     expect($script)->toContain('Multiple JS lockfiles detected. Keep only bun.lock for Bun-only installs.');
@@ -40,6 +43,8 @@ it('includes a one-line AlmaLinux and Rocky installer script with critical setup
     expect($script)->toContain('bun install --frozen-lockfile --force --no-cache');
     expect($script)->toContain('bun install --frozen-lockfile --force --no-cache --no-verify');
     expect($script)->toContain('bun run build failed; retrying once...');
+    expect($script)->toContain('Repairing Bun runtime access by installing a global binary at /usr/local/bin/bun...');
+    expect($script)->toContain('Bun is not executable for ${PANEL_APP_USER}. Re-run this installer after correcting path/permission issues.');
     expect($script)->toContain('Panel admin email: ${PANEL_ADMIN_EMAIL}');
     expect($script)->toContain('Panel admin password was kept from existing account.');
     expect($script)->toContain('s/^listen.acl_users =.*/;listen.acl_users =/');

@@ -69,6 +69,7 @@ if [[ -z "${PANEL_ADMIN_PASSWORD_MODE}" ]]; then
 fi
 
 php_bin="/usr/bin/php"
+BUN_SHELL_ENV='export BUN_INSTALL="$HOME/.bun"; export PATH="$BUN_INSTALL/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin";'
 
 install_packages() {
     dnf -y install "$@"
@@ -91,6 +92,37 @@ set_env_value() {
 run_as_panel() {
     local command="$1"
     runuser -u "${PANEL_APP_USER}" -- bash -lc "${command}"
+}
+
+bun_is_usable_for_panel() {
+    run_as_panel "${BUN_SHELL_ENV} command -v bun >/dev/null 2>&1 && bun --version >/dev/null 2>&1"
+}
+
+ensure_bun_runtime() {
+    if bun_is_usable_for_panel; then
+        log "Bun runtime already available for ${PANEL_APP_USER}."
+        return 0
+    fi
+
+    log "Installing Bun for ${PANEL_APP_USER}..."
+    run_as_panel "curl -fsSL https://bun.sh/install | bash"
+
+    if bun_is_usable_for_panel; then
+        return 0
+    fi
+
+    if [[ -x "/root/.bun/bin/bun" ]]; then
+        log "Repairing Bun runtime access by installing a global binary at /usr/local/bin/bun..."
+        install -m 0755 "/root/.bun/bin/bun" "/usr/local/bin/bun"
+    fi
+
+    if bun_is_usable_for_panel; then
+        log "Bun runtime repaired for ${PANEL_APP_USER}."
+        return 0
+    fi
+
+    log "Bun is not executable for ${PANEL_APP_USER}. Re-run this installer after correcting path/permission issues."
+    exit 1
 }
 
 configure_service_control_sudoers() {
@@ -183,36 +215,32 @@ validate_js_lockfiles() {
 }
 
 install_js_dependencies_with_retries() {
-    local bun_shell='export BUN_INSTALL="$HOME/.bun"; export PATH="$BUN_INSTALL/bin:$PATH";'
-
     validate_js_lockfiles
-    run_as_panel "${bun_shell} cd '${PANEL_APP_DIR}' && rm -rf node_modules"
-    if run_as_panel "${bun_shell} cd '${PANEL_APP_DIR}' && bun install --frozen-lockfile"; then
+    run_as_panel "${BUN_SHELL_ENV} cd '${PANEL_APP_DIR}' && rm -rf node_modules"
+    if run_as_panel "${BUN_SHELL_ENV} cd '${PANEL_APP_DIR}' && bun install --frozen-lockfile"; then
         return 0
     fi
 
     log "bun install --frozen-lockfile failed; clearing Bun cache and node_modules, then retrying..."
-    run_as_panel "${bun_shell} cd \"\$HOME\" && bun pm cache rm || true; rm -rf \"\$HOME/.bun/install/cache\" \"\$HOME/.cache/bun\""
-    run_as_panel "${bun_shell} cd '${PANEL_APP_DIR}' && rm -rf node_modules"
+    run_as_panel "${BUN_SHELL_ENV} cd \"\$HOME\" && bun pm cache rm || true; rm -rf \"\$HOME/.bun/install/cache\" \"\$HOME/.cache/bun\""
+    run_as_panel "${BUN_SHELL_ENV} cd '${PANEL_APP_DIR}' && rm -rf node_modules"
 
-    if run_as_panel "${bun_shell} cd '${PANEL_APP_DIR}' && bun install --frozen-lockfile --force --no-cache"; then
+    if run_as_panel "${BUN_SHELL_ENV} cd '${PANEL_APP_DIR}' && bun install --frozen-lockfile --force --no-cache"; then
         return 0
     fi
 
     log "bun install retry failed; clearing Bun cache and node_modules, then trying one final time with --no-verify..."
-    run_as_panel "${bun_shell} cd \"\$HOME\" && bun pm cache rm || true; rm -rf \"\$HOME/.bun/install/cache\" \"\$HOME/.cache/bun\""
-    run_as_panel "${bun_shell} cd '${PANEL_APP_DIR}' && rm -rf node_modules && bun install --frozen-lockfile --force --no-cache --no-verify"
+    run_as_panel "${BUN_SHELL_ENV} cd \"\$HOME\" && bun pm cache rm || true; rm -rf \"\$HOME/.bun/install/cache\" \"\$HOME/.cache/bun\""
+    run_as_panel "${BUN_SHELL_ENV} cd '${PANEL_APP_DIR}' && rm -rf node_modules && bun install --frozen-lockfile --force --no-cache --no-verify"
 }
 
 build_js_assets_with_retry() {
-    local bun_shell='export BUN_INSTALL="$HOME/.bun"; export PATH="$BUN_INSTALL/bin:$PATH";'
-
-    if run_as_panel "${bun_shell} cd '${PANEL_APP_DIR}' && bun run build"; then
+    if run_as_panel "${BUN_SHELL_ENV} cd '${PANEL_APP_DIR}' && bun run build"; then
         return 0
     fi
 
     log "bun run build failed; retrying once..."
-    run_as_panel "${bun_shell} cd '${PANEL_APP_DIR}' && bun run build"
+    run_as_panel "${BUN_SHELL_ENV} cd '${PANEL_APP_DIR}' && bun run build"
 }
 
 ensure_service_running() {
@@ -315,10 +343,7 @@ touch "${PANEL_APP_DIR}/database/database.sqlite"
 chown "${PANEL_APP_USER}:${PANEL_APP_USER}" "${PANEL_APP_DIR}/.env" "${PANEL_APP_DIR}/database/database.sqlite"
 chmod 664 "${PANEL_APP_DIR}/database/database.sqlite"
 
-if ! run_as_panel "command -v bun >/dev/null 2>&1"; then
-    log "Installing Bun for ${PANEL_APP_USER}..."
-    run_as_panel "curl -fsSL https://bun.sh/install | bash"
-fi
+ensure_bun_runtime
 
 log "Installing PHP dependencies..."
 run_as_panel "cd '${PANEL_APP_DIR}' && composer install --no-dev --optimize-autoloader --no-scripts"
