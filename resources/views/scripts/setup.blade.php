@@ -140,6 +140,12 @@ else
     log "User 'panel' already exists."
 fi
 
+# Grant passwordless sudo to panel user
+log "Configuring passwordless sudo for 'panel' user..."
+echo "panel ALL=(ALL) NOPASSWD: ALL" > /etc/sudoers.d/panel
+chmod 0440 /etc/sudoers.d/panel
+log "Sudo privileges granted to 'panel'."
+
 # 7. Install Base Utilities
 log "Installing base utilities..."
 BASE_UTILS=("curl" "wget" "git" "vim-enhanced" "unzip" "tar" "nano" "mlocate")

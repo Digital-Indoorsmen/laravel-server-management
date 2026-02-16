@@ -12,6 +12,8 @@ const form = useForm({
     system_user: '',
     app_type: 'generic',
     php_version: '8.3',
+    create_database: false,
+    database_type: 'mariadb',
 });
 
 const suggestUser = () => {
@@ -118,6 +120,29 @@ const submit = () => {
                                 <div v-if="form.errors.php_version" class="text-error text-xs mt-1">
                                     {{ form.errors.php_version }}
                                 </div>
+                            </div>
+                        </div>
+
+                        <!-- Database Configuration -->
+                        <div class="divider">Database</div>
+
+                        <div class="form-control">
+                            <label class="label cursor-pointer justify-start gap-4">
+                                <input type="checkbox" v-model="form.create_database" class="checkbox checkbox-primary" />
+                                <span class="label-text">Create Database</span>
+                            </label>
+                        </div>
+
+                        <div v-if="form.create_database" class="form-control">
+                            <label class="label">
+                                <span class="label-text">Database Type</span>
+                            </label>
+                            <select v-model="form.database_type" class="select select-bordered">
+                                <option value="mariadb">MariaDB (MySQL)</option>
+                                <option value="postgresql">PostgreSQL</option>
+                            </select>
+                            <div v-if="form.errors.database_type" class="text-error text-xs mt-1">
+                                {{ form.errors.database_type }}
                             </div>
                         </div>
 

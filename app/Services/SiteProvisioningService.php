@@ -8,7 +8,8 @@ use Illuminate\Support\Facades\Log;
 class SiteProvisioningService
 {
     public function __construct(
-        protected ServerConnectionService $connection
+        protected ServerConnectionService $connection,
+        protected DatabaseProvisioningService $dbProvisioner
     ) {}
 
     public function provision(Site $site): void
@@ -30,7 +31,15 @@ class SiteProvisioningService
             // 4. Configure Nginx
             $this->configureNginx($site);
 
-            // 5. Reload Services
+            // 5. Provision Databases
+            if ($site->databases()->exists()) {
+                foreach ($site->databases as $database) {
+                    $this->dbProvisioner->provision($database);
+                }
+                $this->configureEnvWithDatabase($site);
+            }
+
+            // 6. Reload Services
             $this->reloadServices($site);
 
             $site->update(['status' => 'active']);
@@ -44,23 +53,32 @@ class SiteProvisioningService
 
     protected function createSystemUser(Site $site): void
     {
-        $cmd = "id -u {$site->system_user} &>/dev/null || useradd -m -s /bin/bash {$site->system_user}";
+        $cmd = "id -u {$site->system_user} &>/dev/null || sudo useradd -m -s /bin/bash {$site->system_user}";
         $this->connection->runCommand($site->server, $cmd);
         
         // Ensure home dir permissions
-        $this->connection->runCommand($site->server, "chmod 711 /home/{$site->system_user}");
+        $this->connection->runCommand($site->server, "sudo chmod 711 /home/{$site->system_user}");
+
+        // SELinux User Mapping (MCS Isolation)
+        if ($site->mcs_id) {
+            $category = "s0:c" . $site->mcs_id;
+            // Apply MCS category to the user
+            $semanageCmd = "sudo semanage login -a -s user_u -r {$category} {$site->system_user} || sudo semanage login -m -s user_u -r {$category} {$site->system_user}";
+            $this->connection->runCommand($site->server, "if command -v semanage &> /dev/null; then {$semanageCmd}; fi");
+        }
     }
 
     protected function createDirectories(Site $site): void
     {
         $publicHtml = "/home/{$site->system_user}/public_html";
-        $this->connection->runCommand($site->server, "mkdir -p {$publicHtml}");
-        $this->connection->runCommand($site->server, "chown -R {$site->system_user}:{$site->system_user} /home/{$site->system_user}/public_html");
-        $this->connection->runCommand($site->server, "chmod 755 /home/{$site->system_user}/public_html");
+        $this->connection->runCommand($site->server, "sudo mkdir -p {$publicHtml}");
+        $this->connection->runCommand($site->server, "sudo chown -R {$site->system_user}:{$site->system_user} /home/{$site->system_user}/public_html");
+        $this->connection->runCommand($site->server, "sudo chmod 755 /home/{$site->system_user}/public_html");
 
         // Create a default index.php if empty
         $indexPhp = "<?php echo 'Hello from ' . \$_SERVER['SERVER_NAME'];";
         $cmd = "test -f {$publicHtml}/index.php || echo \"{$indexPhp}\" > {$publicHtml}/index.php";
+        // running as site user, so simple sudo -u is fine.
         $this->connection->runCommand($site->server, "sudo -u {$site->system_user} bash -c '{$cmd}'");
     }
 
@@ -80,16 +98,15 @@ class SiteProvisioningService
     protected function reloadServices(Site $site): void
     {
         $phpService = $this->getPhpServiceName($site);
-        $this->connection->runCommand($site->server, "systemctl reload nginx");
-        $this->connection->runCommand($site->server, "systemctl reload {$phpService}");
+        $this->connection->runCommand($site->server, "sudo systemctl reload nginx");
+        $this->connection->runCommand($site->server, "sudo systemctl reload {$phpService}");
     }
 
     protected function writeRemoteFile(\App\Models\Server $server, string $path, string $content): void
     {
         $base64 = base64_encode($content);
-        // Use bash to decode and write, ensuring directory exists isn't strictly necessary if we assume structure,
-        // but it's good practice. Here we just write the file.
-        $cmd = "echo '{$base64}' | base64 -d > {$path}";
+        // Pipe to sudo tee to write to privileged locations
+        $cmd = "echo '{$base64}' | base64 -d | sudo tee {$path} > /dev/null";
         $this->connection->runCommand($server, $cmd);
     }
 
@@ -105,10 +122,49 @@ class SiteProvisioningService
         return "php{$version}-php-fpm";
     }
 
+    protected function configureEnvWithDatabase(Site $site): void
+    {
+        $database = $site->databases()->first();
+        if (!$database) {
+            return;
+        }
+
+        $connection = $database->type === 'postgresql' ? 'pgsql' : 'mysql';
+        $port = $database->type === 'postgresql' ? 5432 : 3306;
+        $password = $database->password; // Decrypted by model cast
+
+        $envContent = <<<EOT
+APP_NAME="{$site->domain}"
+APP_ENV=production
+APP_DEBUG=false
+APP_URL=http://{$site->domain}
+
+DB_CONNECTION={$connection}
+DB_HOST=127.0.0.1
+DB_PORT={$port}
+DB_DATABASE={$database->name}
+DB_USERNAME={$database->username}
+DB_PASSWORD={$password}
+
+EOT;
+        
+        $exists = false;
+        try {
+            $this->connection->runCommand($site->server, "sudo test -f /home/{$site->system_user}/.env");
+            $exists = true;
+        } catch (\Exception $e) {
+            $exists = false;
+        }
+
+        if (!$exists) {
+            $this->updateEnvContent($site, $envContent);
+        }
+    }
+
     public function getEnvContent(Site $site): string
     {
         try {
-            return $this->connection->runCommand($site->server, "cat /home/{$site->system_user}/.env");
+            return $this->connection->runCommand($site->server, "sudo cat /home/{$site->system_user}/.env");
         } catch (\Exception $e) {
             return '';
         }
@@ -120,15 +176,9 @@ class SiteProvisioningService
         $this->writeRemoteFile($site->server, $path, $content);
         
         // Ensure permissions
-        $this->connection->runCommand($site->server, "chown {$site->system_user}:{$site->system_user} {$path}");
-        $this->connection->runCommand($site->server, "chmod 600 {$path}");
+        $this->connection->runCommand($site->server, "sudo chown {$site->system_user}:{$site->system_user} {$path}");
+        $this->connection->runCommand($site->server, "sudo chmod 600 {$path}");
 
-        // Reload PHP-FPM to pick up new env vars if using clear_env = no (but we are using .user.ini or pool config?)
-        // Usually .env is loaded by the framework (Laravel) at runtime, so no reload needed unless hardcoded in pool.
-        // But if using standard Laravel, .env is read on every request.
-        // However, if we cache config, we need to clear cache.
-        // The requirement says: "Ensure the panel can restart PHP-FPM for specific pools after config changes."
-        // We might as well reload PHP just in case.
         $this->reloadServices($site);
     }
 }

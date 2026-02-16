@@ -8,6 +8,7 @@ use App\Services\SiteProvisioningService;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Str;
 
 class SiteController extends Controller
 {
@@ -46,6 +47,8 @@ class SiteController extends Controller
             'system_user' => ['required', 'string', 'max:32', 'alpha_dash', 'unique:sites,system_user'],
             'php_version' => ['required', 'string', 'in:7.4,8.1,8.2,8.3,8.4,8.5'],
             'app_type' => ['required', 'string', 'in:wordpress,laravel,generic'],
+            'create_database' => ['boolean'],
+            'database_type' => ['required_if:create_database,true', 'string', 'in:mariadb,postgresql'],
         ]);
 
         // Default document root based on app type
@@ -65,6 +68,28 @@ class SiteController extends Controller
                 'document_root' => $documentRoot,
                 'status' => 'creating',
             ]);
+
+            if ($request->boolean('create_database')) {
+                // Generate secure DB name and credentials
+                // Name: db_{slugged_domain_without_dashes}
+                $cleanName = str_replace(['.', '-'], '_', $validated['domain']);
+                $dbName = 'db_' . substr($cleanName, 0, 50); // Ensure length is reasonable
+                
+                // User: same as system user but prefixed or just same? 
+                // Requirement: "Create a dedicated database user". 
+                // Let's use system_user as the base, it's unique per server usually.
+                // But mysql users have 32 char limit (MariaDB < 10.x used to be 16, but we are on modern).
+                $dbUser = $validated['system_user'];
+
+                $site->databases()->create([
+                    'server_id' => $server->id,
+                    'name' => $dbName,
+                    'username' => $dbUser,
+                    'password' => Str::password(24),
+                    'type' => $validated['database_type'],
+                    'status' => 'creating',
+                ]);
+            }
 
             // Dispatch provisioning (synchronous for now for simplicity, should be queued)
             $this->provisioner->provision($site);

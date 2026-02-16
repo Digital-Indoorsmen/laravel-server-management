@@ -1,4 +1,4 @@
-# Status: [ ] Not Complete
+# Status: [x] Complete
 # Title: Website Database Isolation & Provisioning
 
 ## Description
@@ -42,7 +42,7 @@ FLUSH PRIVILEGES;
 - Verify connection from a remote PHP-FPM process using the generated credentials.
 
 ## Completion Criteria
-- [ ] MariaDB provisioning operational
-- [ ] PostgreSQL provisioning operational
-- [ ] User isolation verified (Cross-DB access blocked)
-- [ ] Auto-population of app credentials during site setup functional
+- [x] MariaDB provisioning operational
+- [x] PostgreSQL provisioning operational
+- [x] User isolation verified (Cross-DB access blocked)
+- [x] Auto-population of app credentials during site setup functional

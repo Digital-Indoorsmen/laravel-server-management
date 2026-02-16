@@ -31,5 +31,6 @@ class AppServiceProvider extends ServiceProvider
         \App\Models\SshKey::observe(\App\Observers\ResourceObserver::class);
         \App\Models\Server::observe(\App\Observers\ResourceObserver::class);
         \App\Models\Site::observe(\App\Observers\ResourceObserver::class);
+        \App\Models\Site::observe(\App\Observers\SiteObserver::class);
     }
 }

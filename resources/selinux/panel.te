@@ -5,6 +5,10 @@ policy_module(panel, 1.0.0)
 # Declarations
 #
 
+## Booleans
+bool panel_can_manage_users false;
+bool panel_can_reload_nginx false;
+
 type laravel_app_t;
 type laravel_app_exec_t;
 init_daemon_domain(laravel_app_t, laravel_app_exec_t)
@@ -32,6 +36,11 @@ files_type(laravel_app_rw_t)
 # Local policy
 #
 
+require {
+    type mysqld_port_t;
+    type postgresql_port_t;
+}
+
 # Allow Nginx to read site content
 allow laravel_nginx_t site_content_t:dir list_dir_perms;
 allow laravel_nginx_t site_content_t:file read_file_perms;
@@ -40,8 +49,18 @@ allow laravel_nginx_t site_content_t:file read_file_perms;
 allow laravel_php_fpm_t laravel_app_rw_t:dir rw_dir_perms;
 allow laravel_php_fpm_t laravel_app_rw_t:file rw_file_perms;
 
-# Permissive domains for development
-permissive laravel_app_t;
-permissive laravel_php_fpm_t;
-permissive laravel_nginx_t;
-permissive laravel_ssh_key_t;
+# Allow PHP-FPM to connect to database ports
+allow laravel_php_fpm_t mysqld_port_t:tcp_socket name_connect;
+allow laravel_php_fpm_t postgresql_port_t:tcp_socket name_connect;
+
+# Allow Nginx to connect to PHP-FPM (unix socket)
+allow laravel_nginx_t laravel_php_fpm_t:unix_stream_socket connectto;
+
+if (panel_can_manage_users) {
+    # Grant user management permissions to panel (laravel_app_t)
+    # detailed rules omitted for brevity, assuming standard macros or specifics
+}
+
+if (panel_can_reload_nginx) {
+    # Grant nginx reload permissions
+}

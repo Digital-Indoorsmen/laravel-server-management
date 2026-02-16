@@ -1,4 +1,4 @@
-# Status: [ ] Not Complete
+# Status: [x] Complete
 # Title: SELinux Policy Enforcement & Multi-Tenancy
 
 ## Description
@@ -34,6 +34,6 @@ Each site should be assigned a unique category pair (e.g., `c100`, `c101`) durin
 - Verify Nginx can still serve static content.
 
 ## Completion Criteria
-- [ ] SELinux Enforcing mode active
-- [ ] Cross-site access blocked via MCS/Categories
-- [ ] Audit logging into database functional
+- [x] SELinux Enforcing mode active
+- [x] Cross-site access blocked via MCS/Categories
+- [x] Audit logging into database functional

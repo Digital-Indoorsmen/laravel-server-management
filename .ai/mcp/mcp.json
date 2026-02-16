@@ -1,0 +1,31 @@
+{
+  "mcpServers": {
+    "laravel-boost": {
+      "command": "/Users/claybitner/Library/Application Support/Herd/bin/php84",
+      "args": [
+        "/Users/claybitner/Sites/laravel-server-mgmt/artisan",
+        "boost:mcp"
+      ]
+    },
+    "herd": {
+      "command": "/Users/claybitner/Library/Application Support/Herd/bin/php84",
+      "args": [
+        "/Applications/Herd.app/Contents/Resources/herd-mcp.phar"
+      ],
+      "env": {
+        "SITE_PATH": "/Users/claybitner/Sites/laravel-server-mgmt"
+      }
+    },
+    "daisyui-blueprint": {
+      "command": "bunx",
+      "args": [
+        "-y",
+        "daisyui-blueprint@latest"
+      ],
+      "env": {
+        "LICENSE": "QBP08-VN3FW-MJYAH-FH7HH-4JA7M",
+        "EMAIL": "claybitner@gmail.com"
+      }
+    }
+  }
+}
