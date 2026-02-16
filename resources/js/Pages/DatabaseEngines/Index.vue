@@ -5,8 +5,11 @@ import {
     CircleStackIcon,
     CommandLineIcon,
     PlayIcon,
+    ArrowUpCircleIcon,
     CheckCircleIcon,
 } from "@heroicons/vue/24/outline";
+
+import { onMounted, ref } from "vue";
 
 const props = defineProps({
     server: Object,
@@ -17,11 +20,37 @@ const props = defineProps({
 
 const form = useForm({
     type: "",
+    version: "",
+    action: "install",
+});
+
+const selectedVersions = ref({});
+
+onMounted(() => {
+    props.availableEngines.forEach((engine) => {
+        selectedVersions.value[engine.id] =
+            engine.versions[engine.versions.length - 1];
+    });
 });
 
 const install = (type) => {
-    if (confirm(`Are you sure you want to install ${type}?`)) {
+    const version = selectedVersions.value[type];
+    if (confirm(`Are you sure you want to install ${type} v${version}?`)) {
         form.type = type;
+        form.version = version;
+        form.action = "install";
+        form.post(route("servers.database-engines.store", props.server.id));
+    }
+};
+
+const upgrade = (type) => {
+    if (
+        confirm(
+            `Are you sure you want to upgrade ${type}? This will run dnf upgrade and restart the service.`,
+        )
+    ) {
+        form.type = type;
+        form.action = "upgrade";
         form.post(route("servers.database-engines.store", props.server.id));
     }
 };
@@ -66,11 +95,36 @@ const getStatusBadgeClass = (status) => {
                                 class="badge badge-success gap-1"
                             >
                                 <CheckCircleIcon class="h-4 w-4" />
-                                Installed
+                                {{
+                                    installedEngines[engine.id].version
+                                        ? `v${installedEngines[engine.id].version}`
+                                        : "Installed"
+                                }}
                             </span>
                             <span v-else class="badge badge-soft"
                                 >Not Installed</span
                             >
+                        </div>
+
+                        <div
+                            v-if="!installedEngines[engine.id]"
+                            class="form-control w-full max-w-xs mt-2"
+                        >
+                            <label class="label py-1">
+                                <span class="label-text-alt">Version</span>
+                            </label>
+                            <select
+                                v-model="selectedVersions[engine.id]"
+                                class="select select-bordered select-sm w-full"
+                            >
+                                <option
+                                    v-for="v in engine.versions"
+                                    :key="v"
+                                    :value="v"
+                                >
+                                    {{ engine.name }} {{ v }}
+                                </option>
+                            </select>
                         </div>
 
                         <p class="text-sm opacity-70 py-2">
@@ -88,15 +142,20 @@ const getStatusBadgeClass = (status) => {
                                 <PlayIcon class="h-4 w-4" />
                                 Install {{ engine.name }}
                             </button>
-                            <div v-else class="flex flex-col items-end gap-1">
+                            <div v-else class="flex flex-col items-end gap-2">
                                 <span class="text-xs opacity-50"
                                     >Installed on
                                     {{
                                         installedEngines[engine.id].installed_at
                                     }}</span
                                 >
-                                <button class="btn btn-ghost btn-xs" disabled>
-                                    Re-install
+                                <button
+                                    @click="upgrade(engine.id)"
+                                    class="btn btn-outline btn-xs gap-1"
+                                    :disabled="form.processing"
+                                >
+                                    <ArrowUpCircleIcon class="h-3.5 w-3.5" />
+                                    Upgrade
                                 </button>
                             </div>
                         </div>
@@ -116,6 +175,8 @@ const getStatusBadgeClass = (status) => {
                             <thead>
                                 <tr>
                                     <th>Engine</th>
+                                    <th>Version</th>
+                                    <th>Action</th>
                                     <th>Status</th>
                                     <th>Started At</th>
                                     <th>Finished At</th>
@@ -129,6 +190,18 @@ const getStatusBadgeClass = (status) => {
                                 >
                                     <td class="font-medium uppercase">
                                         {{ install.type }}
+                                    </td>
+                                    <td class="font-mono text-xs opacity-70">
+                                        {{
+                                            install.version
+                                                ? `v${install.version}`
+                                                : "-"
+                                        }}
+                                    </td>
+                                    <td
+                                        class="capitalize text-xs font-mono opacity-70"
+                                    >
+                                        {{ install.action }}
                                     </td>
                                     <td>
                                         <span

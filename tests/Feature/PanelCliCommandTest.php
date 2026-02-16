@@ -176,7 +176,7 @@ it('queues a database engine installation from cli', function () {
     ]);
 
     $this->artisan("panel:cli database:install mariadb --server={$server->id} --no-interaction")
-        ->expectsOutputToContain('Installation of mariadb queued')
+        ->expectsOutputToContain('Installation of mariadb v10.3 queued')
         ->assertSuccessful();
 
     $this->assertDatabaseHas('database_engine_installations', [

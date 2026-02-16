@@ -36,6 +36,7 @@ class DatabaseProvisioningService
     {
         $server = $installation->server;
         $type = $installation->type;
+        $version = $installation->version ?: $this->getDefaultVersion($type);
 
         try {
             $installation->update([
@@ -45,8 +46,9 @@ class DatabaseProvisioningService
 
             $rootPassword = Str::password(32);
             $script = match ($type) {
-                'mariadb' => $this->getMariaDbInstallScript($rootPassword),
-                'postgresql' => $this->getPostgreSqlInstallScript($rootPassword),
+                'mariadb' => $this->getMariaDbInstallScript($rootPassword, $version),
+                'mysql' => $this->getMysqlInstallScript($rootPassword, $version),
+                'postgresql' => $this->getPostgreSqlInstallScript($rootPassword, $version),
                 default => throw new \RuntimeException("Unsupported database type: {$type}"),
             };
 
@@ -62,6 +64,7 @@ class DatabaseProvisioningService
             $engines = $server->database_engines ?? [];
             $engines[$type] = [
                 'status' => 'active',
+                'version' => $version,
                 'installed_at' => now()->toDateTimeString(),
                 'root_password' => $rootPassword,
             ];
@@ -72,17 +75,103 @@ class DatabaseProvisioningService
                 'status' => 'error',
                 'log' => ($installation->log ?? '')."\nError: ".$e->getMessage(),
             ]);
-            Log::error("Failed to install {$type} on server {$server->id}: ".$e->getMessage());
+            Log::error("Failed to install {$type} v{$version} on server {$server->id}: ".$e->getMessage());
             throw $e;
         }
     }
 
-    protected function getMariaDbInstallScript(string $rootPassword): string
+    public function upgradeEngine(DatabaseEngineInstallation $installation): void
+    {
+        $server = $installation->server;
+        $type = $installation->type;
+
+        try {
+            $installation->update([
+                'status' => 'installing',
+                'started_at' => now(),
+            ]);
+
+            $script = match ($type) {
+                'mariadb' => $this->getMariaDbUpgradeScript(),
+                'mysql' => $this->getMysqlUpgradeScript(),
+                'postgresql' => $this->getPostgreSqlUpgradeScript(),
+                default => throw new \RuntimeException("Unsupported database type for upgrade: {$type}"),
+            };
+
+            $output = $this->connection->runCommand($server, $script);
+
+            $installation->update([
+                'status' => 'active',
+                'finished_at' => now(),
+                'log' => ($installation->log ?? '')."\n".$output,
+            ]);
+        } catch (\Exception $e) {
+            $installation->update([
+                'status' => 'error',
+                'log' => ($installation->log ?? '')."\nError: ".$e->getMessage(),
+            ]);
+            Log::error("Failed to upgrade {$type} on server {$server->id}: ".$e->getMessage());
+            throw $e;
+        }
+    }
+
+    protected function getMariaDbUpgradeScript(): string
+    {
+        return <<<'BASH'
+set -e
+echo "Upgrading MariaDB packages..."
+sudo dnf upgrade -y mariadb-server mariadb
+echo "Running mysql_upgrade..."
+sudo mysql_upgrade -u root || echo "mysql_upgrade might not be needed or already completed."
+echo "Restarting MariaDB..."
+sudo systemctl restart mariadb
+echo "MariaDB upgrade complete."
+BASH;
+    }
+
+    protected function getMysqlUpgradeScript(): string
+    {
+        return <<<'BASH'
+set -e
+echo "Upgrading MySQL packages..."
+sudo dnf upgrade -y mysql-server mysql
+echo "Restarting MySQL..."
+sudo systemctl restart mysqld
+echo "MySQL upgrade complete."
+BASH;
+    }
+
+    protected function getPostgreSqlUpgradeScript(): string
+    {
+        return <<<'BASH'
+set -e
+echo "Upgrading PostgreSQL packages..."
+sudo dnf upgrade -y postgresql-server postgresql-contrib
+echo "PostgreSQL minor upgrade complete. Major upgrades require manual orchestration (pg_upgrade) and are not handled automatically yet."
+sudo systemctl restart postgresql
+BASH;
+    }
+
+    protected function getDefaultVersion(string $type): string
+    {
+        return match ($type) {
+            'mariadb' => '10.11',
+            'mysql' => '8.0',
+            'postgresql' => '16',
+            default => 'latest',
+        };
+    }
+
+    protected function getMariaDbInstallScript(string $rootPassword, string $version): string
     {
         $escapedPassword = addslashes($rootPassword);
 
         return <<<BASH
 set -e
+echo "Configuring MariaDB module for version {$version}..."
+sudo dnf module reset -y mariadb || true
+sudo dnf module enable -y mariadb:{$version}
+
 echo "Installing MariaDB..."
 sudo dnf install -y mariadb-server mariadb
 sudo systemctl enable --now mariadb
@@ -98,15 +187,44 @@ echo "MariaDB installation complete."
 BASH;
     }
 
-    protected function getPostgreSqlInstallScript(string $rootPassword): string
+    protected function getMysqlInstallScript(string $rootPassword, string $version): string
     {
         $escapedPassword = addslashes($rootPassword);
 
         return <<<BASH
 set -e
+echo "Configuring MySQL module for version {$version}..."
+sudo dnf module reset -y mysql || true
+sudo dnf module enable -y mysql:{$version}
+
+echo "Installing MySQL..."
+sudo dnf install -y mysql-server mysql
+sudo systemctl enable --now mysqld
+
+echo "Securing MySQL..."
+# Set root password
+sudo mysql -e "ALTER USER 'root'@'localhost' IDENTIFIED BY '{$escapedPassword}'; FLUSH PRIVILEGES;"
+
+# Remove anonymous users and test database
+sudo mysql -u root -p'{$escapedPassword}' -e "DELETE FROM mysql.user WHERE User=''; DELETE FROM mysql.db WHERE Db='test' OR Db='test_%'; FLUSH PRIVILEGES;"
+
+echo "MySQL installation complete."
+BASH;
+    }
+
+    protected function getPostgreSqlInstallScript(string $rootPassword, string $version): string
+    {
+        $escapedPassword = addslashes($rootPassword);
+
+        return <<<BASH
+set -e
+echo "Configuring PostgreSQL module for version {$version}..."
+sudo dnf module reset -y postgresql || true
+sudo dnf module enable -y postgresql:{$version}
+
 echo "Installing PostgreSQL..."
 sudo dnf install -y postgresql-server postgresql-contrib
-sudo postgresql-setup --initdb
+sudo postgresql-setup --initdb || echo "Database already initialized."
 sudo systemctl enable --now postgresql
 
 echo "Setting postgres user password..."
@@ -121,7 +239,10 @@ BASH;
         $server = $database->server;
         $password = $database->password;
 
-        $rootPassword = $server->database_engines['mariadb']['root_password'] ?? null;
+        $rootPassword = $server->database_engines['mariadb']['root_password']
+            ?? $server->database_engines['mysql']['root_password']
+            ?? null;
+
         $auth = $rootPassword ? "-p'".addslashes($rootPassword)."'" : '';
 
         $sql = [

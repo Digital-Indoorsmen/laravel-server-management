@@ -25,6 +25,12 @@ class InstallDatabaseEngine implements ShouldQueue
     {
         $installation = DatabaseEngineInstallation::findOrFail($this->installationId);
 
+        if ($installation->action === 'upgrade') {
+            $service->upgradeEngine($installation);
+
+            return;
+        }
+
         $service->installEngine($installation);
     }
 }

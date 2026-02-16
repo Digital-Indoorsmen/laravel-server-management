@@ -25,11 +25,11 @@ use function Laravel\Prompts\text;
 class PanelCli extends Command
 {
     protected $signature = 'panel:cli
-        {action? : status, update, new:site, site:deploy, database:install, or help}
-        {target? : Site id for site:deploy or database type for database:install}
+        {action? : status, update, new:site, site:deploy, database:install, database:upgrade, or help}
+        {target? : Site id for site:deploy or database type for database:install/upgrade}
         {--dry-run : Preview update commands without executing them}
         {--branch=main : Branch to deploy for site:deploy}
-        {--server= : Target server id for new:site or database:install}
+        {--server= : Target server id for new:site or database:install/upgrade}
         {--domain= : Domain for new:site}
         {--system-user= : Linux system user for new:site}
         {--php-version= : PHP version for new:site}
@@ -39,7 +39,7 @@ class PanelCli extends Command
         {--database-type= : Database type for new:site}
         {--provision=1 : Run provisioning after creating site (0/1)}';
 
-    protected $description = 'Panel CLI entrypoint for status, updates, site creation, deployments, and database installation';
+    protected $description = 'Panel CLI entrypoint for status, updates, site creation, deployments, and database management';
 
     public function __construct(
         protected PanelHealthService $panelHealth,
@@ -58,7 +58,7 @@ class PanelCli extends Command
             return $this->showAvailableCommands();
         }
 
-        if (! in_array($action, ['status', 'update', 'new:site', 'site:deploy', 'database:install', 'help'], true)) {
+        if (! in_array($action, ['status', 'update', 'new:site', 'site:deploy', 'database:install', 'database:upgrade', 'help'], true)) {
             $this->components->error("Unknown action [{$action}].");
 
             return $this->showAvailableCommands(self::FAILURE);
@@ -71,6 +71,7 @@ class PanelCli extends Command
             'new:site' => $this->runNewSite(),
             'site:deploy' => $this->runSiteDeploy(),
             'database:install' => $this->runDatabaseInstall(),
+            'database:upgrade' => $this->runDatabaseUpgrade(),
             default => self::FAILURE,
         };
     }
@@ -85,6 +86,7 @@ class PanelCli extends Command
             ['larapanel new:site', 'Create and optionally provision a new site'],
             ['larapanel site:deploy {site}', 'Queue a deployment for a specific site'],
             ['larapanel database:install {type}', 'Install a database engine (mariadb, postgresql)'],
+            ['larapanel database:upgrade {type}', 'Upgrade a database engine packages'],
             ['larapanel help', 'Show this command list'],
         ]);
 
@@ -100,43 +102,40 @@ class PanelCli extends Command
         if ($type === '' && $this->input->isInteractive()) {
             $type = select(
                 label: 'Which database engine should be installed?',
-                options: ['mariadb' => 'MariaDB', 'postgresql' => 'PostgreSQL'],
+                options: [
+                    'mariadb' => 'MariaDB',
+                    'mysql' => 'MySQL',
+                    'postgresql' => 'PostgreSQL',
+                ],
             );
         }
 
-        if (! in_array($type, ['mariadb', 'postgresql'], true)) {
-            $this->components->error("Invalid database type [{$type}]. Supported: mariadb, postgresql.");
+        if (! in_array($type, ['mariadb', 'mysql', 'postgresql'], true)) {
+            $this->components->error("Invalid database type [{$type}]. Supported: mariadb, mysql, postgresql.");
 
             return self::FAILURE;
         }
 
-        $servers = Server::query()->latest()->get(['id', 'name', 'ip_address']);
+        $versions = match ($type) {
+            'mariadb' => ['10.3', '10.5', '10.11'],
+            'mysql' => ['8.0', '8.4'],
+            'postgresql' => ['13', '15', '16'],
+            default => [],
+        };
 
-        if ($servers->isEmpty()) {
-            $this->components->error('No servers found.');
+        $version = null;
 
-            return self::FAILURE;
-        }
-
-        $serverId = (string) ($this->option('server') ?? '');
-
-        if ($serverId === '' && $this->input->isInteractive()) {
-            $serverId = select(
-                label: 'Which server should the engine be installed on?',
-                options: $servers->mapWithKeys(fn (Server $server): array => [
-                    (string) $server->id => "{$server->name} ({$server->ip_address})",
-                ])->all(),
-                default: (string) $servers->first()->id,
+        if (count($versions) > 1 && $this->input->isInteractive()) {
+            $version = select(
+                label: "Which major version of {$type}?",
+                options: array_combine($versions, $versions),
+                default: end($versions)
             );
+        } else {
+            $version = $versions[0] ?? 'latest';
         }
 
-        $server = $servers->firstWhere('id', $serverId);
-
-        if (! $server) {
-            $this->components->error('Invalid server id.');
-
-            return self::FAILURE;
-        }
+        $server = $this->ensureServerExists();
 
         // Check if already installed
         if (isset($server->database_engines[$type])) {
@@ -149,15 +148,80 @@ class PanelCli extends Command
         $installation = DatabaseEngineInstallation::query()->create([
             'server_id' => $server->id,
             'type' => $type,
+            'version' => $version,
+            'action' => 'install',
             'status' => 'queued',
         ]);
 
         InstallDatabaseEngine::dispatch($installation->id);
 
-        $this->components->info("Installation of {$type} queued for server {$server->name}.");
+        $this->components->info("Installation of {$type} v{$version} queued for server {$server->name}.");
         $this->line("You can monitor progress in the web panel or via 'larapanel status'.");
 
         return self::SUCCESS;
+    }
+
+    protected function runDatabaseUpgrade(): int
+    {
+        $type = strtolower((string) ($this->argument('target') ?? ''));
+
+        if ($type === '' && $this->input->isInteractive()) {
+            $type = select(
+                label: 'Which database engine should be upgraded?',
+                options: [
+                    'mariadb' => 'MariaDB',
+                    'mysql' => 'MySQL',
+                    'postgresql' => 'PostgreSQL',
+                ],
+            );
+        }
+
+        if (! in_array($type, ['mariadb', 'mysql', 'postgresql'], true)) {
+            $this->components->error("Invalid database type [{$type}]. Supported: mariadb, mysql, postgresql.");
+
+            return self::FAILURE;
+        }
+
+        $server = $this->ensureServerExists();
+
+        if (! isset($server->database_engines[$type])) {
+            $this->components->error("{$type} is not recorded as installed. Use database:install first.");
+
+            return self::FAILURE;
+        }
+
+        $installation = DatabaseEngineInstallation::query()->create([
+            'server_id' => $server->id,
+            'type' => $type,
+            'action' => 'upgrade',
+            'status' => 'queued',
+        ]);
+
+        InstallDatabaseEngine::dispatch($installation->id);
+
+        $this->components->info("Upgrade of {$type} queued for server {$server->name}.");
+
+        return self::SUCCESS;
+    }
+
+    protected function ensureServerExists(): Server
+    {
+        $server = Server::query()->first();
+
+        if ($server) {
+            return $server;
+        }
+
+        $this->components->info('No servers found. Creating a local server record...');
+
+        return Server::query()->create([
+            'name' => 'Local Server',
+            'ip_address' => '127.0.0.1',
+            'hostname' => gethostname() ?: 'localhost',
+            'os_version' => 'rocky_9', // Defaulting to current target OS
+            'status' => 'active',
+            'web_server' => 'nginx',
+        ]);
     }
 
     protected function runStatus(): int
@@ -344,35 +408,7 @@ class PanelCli extends Command
 
     protected function runNewSite(): int
     {
-        $servers = Server::query()->latest()->get(['id', 'name', 'ip_address', 'web_server']);
-
-        if ($servers->isEmpty()) {
-            $this->components->error('No servers found. Add a server in the panel first.');
-
-            return self::FAILURE;
-        }
-
-        $serverId = (string) ($this->option('server') ?? '');
-
-        if ($serverId === '' && $this->input->isInteractive() && ! $this->option('no-interaction')) {
-            $serverOptions = $servers->mapWithKeys(fn (Server $server): array => [
-                (string) $server->id => "{$server->name} ({$server->ip_address})",
-            ])->all();
-
-            $serverId = select(
-                label: 'Which server should host this site?',
-                options: $serverOptions,
-                default: (string) $servers->first()->id,
-            );
-        }
-
-        $server = $servers->firstWhere('id', $serverId);
-
-        if (! $server) {
-            $this->components->error('Invalid server id. Provide --server with a valid value.');
-
-            return self::FAILURE;
-        }
+        $server = $this->ensureServerExists();
 
         try {
             $domain = $this->resolveValue(
