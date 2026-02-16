@@ -23,7 +23,10 @@ it('includes a one-line AlmaLinux and Rocky installer script with critical setup
     expect($script)->toContain('artisan package:discover --ansi');
     expect($script)->toContain('install_js_dependencies_with_retries');
     expect($script)->toContain('build_js_assets_with_retry');
+    expect($script)->toContain('Multiple JS lockfiles detected. Keep only bun.lock for Bun-only installs.');
+    expect($script)->toContain('Unsupported JS lockfile detected. Commit bun.lock and remove other lockfiles.');
     expect($script)->toContain('bun install --frozen-lockfile failed; clearing Bun cache and node_modules, then retrying...');
+    expect($script)->toContain('bun pm cache rm || true');
     expect($script)->toContain('bun install --frozen-lockfile --force --no-cache');
     expect($script)->toContain('bun install --frozen-lockfile --force --no-cache --no-verify');
     expect($script)->toContain('bun run build failed; retrying once...');

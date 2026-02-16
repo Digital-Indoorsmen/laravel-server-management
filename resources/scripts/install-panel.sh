@@ -81,16 +81,38 @@ run_as_panel() {
     runuser -u "${PANEL_APP_USER}" -- bash -lc "${command}"
 }
 
+validate_js_lockfiles() {
+    local lockfile_count
+    lockfile_count="$(find "${PANEL_APP_DIR}" -maxdepth 1 -type f \( -name 'bun.lock' -o -name 'bun.lockb' -o -name 'package-lock.json' -o -name 'yarn.lock' -o -name 'pnpm-lock.yaml' \) | wc -l | tr -d ' ')"
+
+    if [[ "${lockfile_count}" -eq 0 ]]; then
+        log "No JS lockfile found. Expected bun.lock for Bun-managed installs."
+        exit 1
+    fi
+
+    if [[ "${lockfile_count}" -gt 1 ]]; then
+        log "Multiple JS lockfiles detected. Keep only bun.lock for Bun-only installs."
+        find "${PANEL_APP_DIR}" -maxdepth 1 -type f \( -name 'bun.lock' -o -name 'bun.lockb' -o -name 'package-lock.json' -o -name 'yarn.lock' -o -name 'pnpm-lock.yaml' \) -print
+        exit 1
+    fi
+
+    if [[ ! -f "${PANEL_APP_DIR}/bun.lock" ]]; then
+        log "Unsupported JS lockfile detected. Commit bun.lock and remove other lockfiles."
+        exit 1
+    fi
+}
+
 install_js_dependencies_with_retries() {
     local bun_shell='export BUN_INSTALL="$HOME/.bun"; export PATH="$BUN_INSTALL/bin:$PATH";'
 
+    validate_js_lockfiles
     run_as_panel "${bun_shell} cd '${PANEL_APP_DIR}' && rm -rf node_modules"
     if run_as_panel "${bun_shell} cd '${PANEL_APP_DIR}' && bun install --frozen-lockfile"; then
         return 0
     fi
 
     log "bun install --frozen-lockfile failed; clearing Bun cache and node_modules, then retrying..."
-    run_as_panel "${bun_shell} rm -rf \"\$HOME/.bun/install/cache\" \"\$HOME/.cache/bun\""
+    run_as_panel "${bun_shell} bun pm cache rm || true; rm -rf \"\$HOME/.bun/install/cache\" \"\$HOME/.cache/bun\""
     run_as_panel "${bun_shell} cd '${PANEL_APP_DIR}' && rm -rf node_modules"
 
     if run_as_panel "${bun_shell} cd '${PANEL_APP_DIR}' && bun install --frozen-lockfile --force --no-cache"; then
@@ -98,7 +120,7 @@ install_js_dependencies_with_retries() {
     fi
 
     log "bun install retry failed; clearing Bun cache and node_modules, then trying one final time with --no-verify..."
-    run_as_panel "${bun_shell} rm -rf \"\$HOME/.bun/install/cache\" \"\$HOME/.cache/bun\""
+    run_as_panel "${bun_shell} bun pm cache rm || true; rm -rf \"\$HOME/.bun/install/cache\" \"\$HOME/.cache/bun\""
     run_as_panel "${bun_shell} cd '${PANEL_APP_DIR}' && rm -rf node_modules && bun install --frozen-lockfile --force --no-cache --no-verify"
 }
 
