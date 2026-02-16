@@ -1,59 +1,106 @@
-<p align="center"><a href="https://laravel.com" target="_blank"><img src="https://raw.githubusercontent.com/laravel/art/master/logo-lockup/5%20SVG/2%20CMYK/1%20Full%20Color/laravel-logolockup-cmyk-red.svg" width="400" alt="Laravel Logo"></a></p>
+# Laravel Server Management Panel
 
-<p align="center">
-<a href="https://github.com/laravel/framework/actions"><img src="https://github.com/laravel/framework/workflows/tests/badge.svg" alt="Build Status"></a>
-<a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/dt/laravel/framework" alt="Total Downloads"></a>
-<a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/v/laravel/framework" alt="Latest Stable Version"></a>
-<a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/l/laravel/framework" alt="License"></a>
-</p>
+This project is a Laravel + Inertia control panel for provisioning and managing self-hosted web servers (currently focused on AlmaLinux and Rocky Linux).
 
-## About Laravel
+It tracks servers, generates a one-time bootstrap script, manages SSH keys, provisions isolated sites (Nginx + PHP-FPM + optional database), and supports remote `.env` editing.
 
-Laravel is a web application framework with expressive, elegant syntax. We believe development must be an enjoyable and creative experience to be truly fulfilling. Laravel takes the pain out of development by easing common tasks used in many web projects, such as:
+## Current Feature Set
 
-- [Simple, fast routing engine](https://laravel.com/docs/routing).
-- [Powerful dependency injection container](https://laravel.com/docs/container).
-- Multiple back-ends for [session](https://laravel.com/docs/session) and [cache](https://laravel.com/docs/cache) storage.
-- Expressive, intuitive [database ORM](https://laravel.com/docs/eloquent).
-- Database agnostic [schema migrations](https://laravel.com/docs/migrations).
-- [Robust background job processing](https://laravel.com/docs/queues).
-- [Real-time event broadcasting](https://laravel.com/docs/broadcasting).
+- Server dashboard with pending/active states and provisioning command generation.
+- Setup script endpoint (`/setup/{token}`) that installs and configures:
+  - Nginx, MariaDB, PostgreSQL, Redis, Fail2ban
+  - Multiple PHP-FPM versions (Remi packages)
+  - SELinux policy scaffolding and firewall defaults
+  - A privileged `panel` user used for remote automation
+- Setup callback endpoint (`/setup/{token}/callback`) for status updates (`provisioning` -> `ready`).
+- SSH key management:
+  - generate Ed25519 or RSA keypairs
+  - import public keys
+  - download generated private keys
+  - private keys encrypted at rest
+- Server connection checks over SSH (OS, RAM, CPU cores, uptime) with log entries.
+- Site provisioning per server:
+  - Linux system user and directory creation
+  - PHP-FPM pool config generation
+  - Nginx vhost config generation
+  - optional MariaDB or PostgreSQL database/user provisioning
+  - optional starter `.env` generation with DB credentials
+- Site details and remote `.env` editor.
+- Audit/event logging for model create/update/delete and site MCS assignment.
 
-Laravel is accessible, powerful, and provides tools required for large, robust applications.
+## Tech Stack
 
-## Learning Laravel
+- PHP 8.4, Laravel 12
+- Inertia.js v2 + Vue 3
+- Tailwind CSS v4 + DaisyUI
+- phpseclib v3 for SSH operations
+- SQLite default local database (with performance pragmas)
+- Pest v4 for tests
 
-Laravel has the most extensive and thorough [documentation](https://laravel.com/docs) and video tutorial library of all modern web application frameworks, making it a breeze to get started with the framework. You can also check out [Laravel Learn](https://laravel.com/learn), where you will be guided through building a modern Laravel application.
+## Local Development
 
-If you don't feel like reading, [Laracasts](https://laracasts.com) can help. Laracasts contains thousands of video tutorials on a range of topics including Laravel, modern PHP, unit testing, and JavaScript. Boost your skills by digging into our comprehensive video library.
+### Prerequisites
 
-## Laravel Sponsors
+- PHP 8.4+
+- Composer
+- Bun
+- SQLite (default) or another configured DB
 
-We would like to extend our thanks to the following sponsors for funding Laravel development. If you are interested in becoming a sponsor, please visit the [Laravel Partners program](https://partners.laravel.com).
+### Install
 
-### Premium Partners
+```bash
+composer run setup
+```
 
-- **[Vehikl](https://vehikl.com)**
-- **[Tighten Co.](https://tighten.co)**
-- **[Kirschbaum Development Group](https://kirschbaumdevelopment.com)**
-- **[64 Robots](https://64robots.com)**
-- **[Curotec](https://www.curotec.com/services/technologies/laravel)**
-- **[DevSquad](https://devsquad.com/hire-laravel-developers)**
-- **[Redberry](https://redberry.international/laravel-development)**
-- **[Active Logic](https://activelogic.com)**
+This installs dependencies, creates `.env` if missing, generates an app key, runs migrations, installs frontend packages, and builds assets.
 
-## Contributing
+### Run
 
-Thank you for considering contributing to the Laravel framework! The contribution guide can be found in the [Laravel documentation](https://laravel.com/docs/contributions).
+```bash
+composer run dev
+```
 
-## Code of Conduct
+This starts the Laravel server, queue listener, logs (`pail`), and Vite dev server concurrently.
 
-In order to ensure that the Laravel community is welcoming to all, please review and abide by the [Code of Conduct](https://laravel.com/docs/contributions#code-of-conduct).
+If you use Laravel Herd, the project is also available at the standard Herd project domain for this folder.
 
-## Security Vulnerabilities
+## Testing
 
-If you discover a security vulnerability within Laravel, please send an e-mail to Taylor Otwell via [taylor@laravel.com](mailto:taylor@laravel.com). All security vulnerabilities will be promptly addressed.
+Run all tests:
 
-## License
+```bash
+php artisan test --compact
+```
 
-The Laravel framework is open-sourced software licensed under the [MIT license](https://opensource.org/licenses/MIT).
+Run a targeted suite:
+
+```bash
+php artisan test --compact tests/Feature/SiteProvisioningTest.php
+```
+
+## Provisioning Workflow
+
+1. Create or import an SSH key in the panel.
+2. Create a server record with an attached SSH key and setup token.
+3. Copy the generated bootstrap command from the dashboard and run it as root on the target server.
+4. Wait for callback status to become `ready`.
+5. Create sites on that server (optionally with database provisioning).
+6. Manage site configuration via the `.env` editor.
+
+## Important Assumptions
+
+- Remote command execution logs in as Linux user `panel` using the selected SSH private key.
+- The setup script is intended for AlmaLinux/Rocky Linux.
+- Site provisioning currently runs synchronously in the request cycle.
+- Deprovisioning is minimal (site row delete; no full remote teardown yet).
+
+## Current Gaps / In Progress
+
+- Full server CRUD UI/routes are not fully implemented yet.
+- Some dashboard metrics and service cards are placeholders.
+- Authentication flow is not fully wired for production use in this branch.
+
+## Repository Notes
+
+- `legacy/` is intentionally left out of Git tracking in local Git exclude rules for migration/reference work.
+- `verification/` contains VM-based provisioning verification assets (Vagrant + pytest).
