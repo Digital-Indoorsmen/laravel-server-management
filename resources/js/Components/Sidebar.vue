@@ -14,10 +14,39 @@ const page = usePage();
 const currentUrl = computed(() => page.url);
 
 const navigation = [
-    { name: "Dashboard", href: route("dashboard"), icon: Squares2X2Icon, startsWith: "/dashboard" },
-    { name: "System", href: route("system.index"), icon: ServerIcon, startsWith: "/system" },
-    { name: "Sites", href: route("sites.catalog"), icon: GlobeAltIcon, startsWith: "/sites" },
-    { name: "Databases", href: route("databases.index"), icon: CircleStackIcon, startsWith: "/databases" },
+    {
+        name: "Dashboard",
+        href: route("dashboard"),
+        icon: Squares2X2Icon,
+        startsWith: "/dashboard",
+    },
+    {
+        name: "System",
+        href: route("system.index"),
+        icon: ServerIcon,
+        startsWith: "/system",
+    },
+    {
+        name: "Sites",
+        href: route("sites.catalog"),
+        icon: GlobeAltIcon,
+        startsWith: "/sites",
+    },
+    {
+        name: "Databases",
+        href: route("databases.index"),
+        icon: CircleStackIcon,
+        startsWith: "/databases",
+    },
+    {
+        name: "DB Engines",
+        href: page.props.hostServerId
+            ? route("servers.database-engines.index", page.props.hostServerId)
+            : "#",
+        icon: CommandLineIcon,
+        startsWith: "/servers",
+        hidden: !page.props.hostServerId,
+    },
     {
         name: "SSH Keys",
         href: route("ssh-keys.index"),
@@ -27,7 +56,10 @@ const navigation = [
 ];
 
 const isActive = (startsWith) => {
-    return currentUrl.value === startsWith || currentUrl.value.startsWith(`${startsWith}/`);
+    return (
+        currentUrl.value === startsWith ||
+        currentUrl.value.startsWith(`${startsWith}/`)
+    );
 };
 </script>
 
@@ -49,21 +81,24 @@ const isActive = (startsWith) => {
 
         <!-- Navigation -->
         <ul class="menu w-full grow p-2 gap-1 px-3">
-            <li v-for="item in navigation" :key="item.name">
-                <Link
-                    :href="item.href"
-                    class="flex items-center gap-3 px-3 py-2 rounded-lg hover:bg-base-300 transition-colors"
-                    :class="{
-                        'bg-primary text-primary-content hover:bg-primary/90': isActive(item.startsWith),
-                    }"
-                    :title="item.name"
-                >
-                    <component :is="item.icon" class="h-5 w-5 shrink-0" />
-                    <span class="truncate font-medium">
-                        {{ item.name }}
-                    </span>
-                </Link>
-            </li>
+            <template v-for="item in navigation" :key="item.name">
+                <li v-if="!item.hidden">
+                    <Link
+                        :href="item.href"
+                        class="flex items-center gap-3 px-3 py-2 rounded-lg hover:bg-base-300 transition-colors"
+                        :class="{
+                            'bg-primary text-primary-content hover:bg-primary/90':
+                                isActive(item.startsWith),
+                        }"
+                        :title="item.name"
+                    >
+                        <component :is="item.icon" class="h-5 w-5 shrink-0" />
+                        <span class="truncate font-medium">
+                            {{ item.name }}
+                        </span>
+                    </Link>
+                </li>
+            </template>
         </ul>
 
         <!-- Bottom Section -->

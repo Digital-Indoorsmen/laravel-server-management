@@ -1,14 +1,14 @@
 <?php
 
+use App\Models\Database;
 use App\Models\Server;
 use App\Models\Site;
-use App\Models\Database;
+use App\Models\User;
 use App\Services\DatabaseProvisioningService;
 use App\Services\ServerConnectionService;
 use App\Services\SiteProvisioningService;
-use Mockery\MockInterface;
 use Illuminate\Foundation\Testing\RefreshDatabase;
-use App\Models\User;
+use Mockery\MockInterface;
 
 uses(RefreshDatabase::class);
 
@@ -23,7 +23,7 @@ test('database provisioning service provisions mariadb', function () {
         'document_root' => '/home/dbtest/public_html',
         'status' => 'creating',
     ]);
-    
+
     $database = Database::create([
         'site_id' => $site->id,
         'server_id' => $server->id,
@@ -37,11 +37,11 @@ test('database provisioning service provisions mariadb', function () {
         // Expect MariaDB commands
         $mock->shouldReceive('runCommand')
             ->withArgs(function ($server, $cmd) use ($database) {
-                return str_contains($cmd, 'mysql') && 
+                return str_contains($cmd, 'mysql') &&
                        str_contains($cmd, "CREATE DATABASE IF NOT EXISTS `{$database->name}`");
             })
             ->once();
-            
+
         $mock->shouldReceive('runCommand')->andReturn(''); // Catch-all for others
     });
 
@@ -62,7 +62,7 @@ test('database provisioning service provisions postgresql', function () {
         'document_root' => '/home/pgtest/public_html',
         'status' => 'creating',
     ]);
-    
+
     $database = Database::create([
         'site_id' => $site->id,
         'server_id' => $server->id,
@@ -72,13 +72,14 @@ test('database provisioning service provisions postgresql', function () {
         'type' => 'postgresql',
     ]);
 
-    $this->mock(ServerConnectionService::class, function (MockInterface $mock) use ($database) {
+    $this->mock(ServerConnectionService::class, function (MockInterface $mock) {
         // Expect PostgreSQL commands
         $mock->shouldReceive('runCommand')
-             ->withArgs(function($s, $cmd) {
-                 return str_contains($cmd, 'SELECT 1 FROM pg_roles');
-             })
-             ->andReturn('0'); // User does not exist
+            ->withArgs(function ($s, $cmd) {
+                /** @noinspection SqlNoDataSourceInspection */
+                return str_contains($cmd, 'SELECT 1 FROM pg_roles');
+            })
+            ->andReturn('0'); // User does not exist
 
         $mock->shouldReceive('runCommand')
             ->withArgs(function ($server, $cmd) {
@@ -87,11 +88,12 @@ test('database provisioning service provisions postgresql', function () {
             ->once();
 
         $mock->shouldReceive('runCommand')
-             ->withArgs(function($s, $cmd) {
-                 return str_contains($cmd, 'SELECT 1 FROM pg_database');
-             })
-             ->andReturn('0'); // DB does not exist
-             
+            ->withArgs(function ($s, $cmd) {
+                /** @noinspection SqlNoDataSourceInspection */
+                return str_contains($cmd, 'SELECT 1 FROM pg_database');
+            })
+            ->andReturn('0'); // DB does not exist
+
         $mock->shouldReceive('runCommand')
             ->withArgs(function ($server, $cmd) {
                 return str_contains($cmd, 'CREATE DATABASE');
@@ -119,23 +121,23 @@ test('site controller creates database model', function () {
     $response = $this->withoutMiddleware([ValidateCsrfToken::class])
         ->actingAs($user)
         ->post(route('servers.sites.store', $server), [
-        'domain' => 'withdb.com',
-        'system_user' => 'withdb',
-        'php_version' => '8.2',
-        'app_type' => 'wordpress',
-        'create_database' => true,
-        'database_type' => 'mariadb',
-    ]);
+            'domain' => 'withdb.com',
+            'system_user' => 'withdb',
+            'php_version' => '8.2',
+            'app_type' => 'wordpress',
+            'create_database' => true,
+            'database_type' => 'mariadb',
+        ]);
 
     $response->assertSessionHasNoErrors();
     $response->assertRedirect();
-    
+
     $this->assertDatabaseHas('sites', ['domain' => 'withdb.com']);
     $this->assertDatabaseHas('databases', [
         'username' => 'withdb',
         'type' => 'mariadb',
     ]);
-    
+
     $db = Database::where('username', 'withdb')->first();
     expect($db->name)->toContain('db_withdb');
 });

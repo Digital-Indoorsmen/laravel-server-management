@@ -43,6 +43,7 @@ class HandleInertiaRequests extends Middleware
             'flash' => [
                 'success' => fn () => $request->session()->get('success'),
             ],
+            'hostServerId' => \App\Models\Server::query()->value('id'),
         ];
     }
 }

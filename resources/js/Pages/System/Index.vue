@@ -1,6 +1,6 @@
 <script setup>
 import { computed } from "vue";
-import { Head, useForm, usePage } from "@inertiajs/vue3";
+import { Head, Link, useForm, usePage } from "@inertiajs/vue3";
 import AppLayout from "@/Layouts/AppLayout.vue";
 import ServiceItem from "@/Components/UI/ServiceItem.vue";
 import {
@@ -83,14 +83,18 @@ const firewallServices = computed(() => {
 const servicesWithKeys = computed(() => {
     return props.services.map((service) => ({
         ...service,
-        serviceKey: service.key ?? service.name.toLowerCase().replace(/\s+/g, "-"),
+        serviceKey:
+            service.key ?? service.name.toLowerCase().replace(/\s+/g, "-"),
     }));
 });
 
 const runServiceAction = (serviceKey, action) => {
-    controlForm.post(route("system.services.control", { service: serviceKey, action }), {
-        preserveScroll: true,
-    });
+    controlForm.post(
+        route("system.services.control", { service: serviceKey, action }),
+        {
+            preserveScroll: true,
+        },
+    );
 };
 </script>
 
@@ -103,21 +107,30 @@ const runServiceAction = (serviceKey, action) => {
                 <span>{{ page.props.flash.success }}</span>
             </div>
 
-            <div v-if="page.props.errors?.service_control" class="alert alert-error">
+            <div
+                v-if="page.props.errors?.service_control"
+                class="alert alert-error"
+            >
                 <span>{{ page.props.errors.service_control }}</span>
             </div>
 
             <div class="flex items-end justify-between gap-4">
                 <div>
-                    <h1 class="text-2xl font-bold tracking-tight text-base-content flex items-center gap-2">
+                    <h1
+                        class="text-2xl font-bold tracking-tight text-base-content flex items-center gap-2"
+                    >
                         <ServerIcon class="h-8 w-8 text-primary" />
                         System
                     </h1>
                     <p class="text-base-content/60">
-                        Live operating system and service status for this panel host.
+                        Live operating system and service status for this panel
+                        host.
                     </p>
                 </div>
-                <span class="text-xs font-mono opacity-50 bg-base-300 px-2 py-1 rounded">UPTIME: {{ uptime }}</span>
+                <span
+                    class="text-xs font-mono opacity-50 bg-base-300 px-2 py-1 rounded"
+                    >UPTIME: {{ uptime }}</span
+                >
             </div>
 
             <div class="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
@@ -130,12 +143,18 @@ const runServiceAction = (serviceKey, action) => {
                         <div class="stat-figure" :class="stat.color">
                             <component :is="stat.icon" class="h-6 w-6" />
                         </div>
-                        <div class="stat-title text-xs font-bold uppercase tracking-wider">
+                        <div
+                            class="stat-title text-xs font-bold uppercase tracking-wider"
+                        >
                             {{ stat.name }}
                         </div>
-                        <div class="stat-value text-2xl flex items-baseline gap-1">
+                        <div
+                            class="stat-value text-2xl flex items-baseline gap-1"
+                        >
                             {{ stat.value }}
-                            <span class="text-xs font-medium opacity-50">{{ stat.unit }}</span>
+                            <span class="text-xs font-medium opacity-50">{{
+                                stat.unit
+                            }}</span>
                         </div>
                     </div>
                 </div>
@@ -144,11 +163,31 @@ const runServiceAction = (serviceKey, action) => {
             <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
                 <div class="lg:col-span-2 space-y-4">
                     <div class="flex items-center justify-between gap-2">
-                        <h2 class="text-lg font-bold flex items-center gap-2">
-                        <ViewColumnsIcon class="h-5 w-5 text-primary" />
-                        Services
-                        </h2>
-                        <span v-if="!canManageServices" class="text-xs opacity-60">
+                        <div class="flex items-center gap-4">
+                            <h2
+                                class="text-lg font-bold flex items-center gap-2"
+                            >
+                                <ViewColumnsIcon class="h-5 w-5 text-primary" />
+                                Services
+                            </h2>
+                            <Link
+                                v-if="page.props.hostServerId"
+                                :href="
+                                    route(
+                                        'servers.database-engines.index',
+                                        page.props.hostServerId,
+                                    )
+                                "
+                                class="btn btn-xs btn-outline btn-primary"
+                            >
+                                <CircleStackIcon class="h-3.5 w-3.5" />
+                                Database Engines
+                            </Link>
+                        </div>
+                        <span
+                            v-if="!canManageServices"
+                            class="text-xs opacity-60"
+                        >
                             Read-only: service controls require sudo access.
                         </span>
                     </div>
@@ -158,7 +197,10 @@ const runServiceAction = (serviceKey, action) => {
                             :key="service.name"
                             :service-key="service.serviceKey"
                             :controls-enabled="canManageServices"
-                            @control="(action) => runServiceAction(service.serviceKey, action)"
+                            @control="
+                                (action) =>
+                                    runServiceAction(service.serviceKey, action)
+                            "
                             v-bind="service"
                         />
                     </div>
@@ -169,15 +211,26 @@ const runServiceAction = (serviceKey, action) => {
                         <ShieldCheckIcon class="h-5 w-5 text-primary" />
                         Security
                     </h2>
-                    <div class="card border p-4" :class="{
-                        'bg-success/10 border-success/20': security.firewall_active,
-                        'bg-error/10 border-error/20': !security.firewall_active,
-                    }">
+                    <div
+                        class="card border p-4"
+                        :class="{
+                            'bg-success/10 border-success/20':
+                                security.firewall_active,
+                            'bg-error/10 border-error/20':
+                                !security.firewall_active,
+                        }"
+                    >
                         <p class="text-sm">
-                            SELinux mode: <span class="font-bold">{{ security.selinux_mode }}</span>
+                            SELinux mode:
+                            <span class="font-bold">{{
+                                security.selinux_mode
+                            }}</span>
                         </p>
                         <p class="text-sm mt-2">
-                            Firewall: <span class="font-bold">{{ security.firewall_active ? "active" : "inactive" }}</span>
+                            Firewall:
+                            <span class="font-bold">{{
+                                security.firewall_active ? "active" : "inactive"
+                            }}</span>
                         </p>
                         <p class="text-xs mt-2 opacity-80">
                             Allowed services: {{ firewallServices }}

@@ -1,6 +1,6 @@
 <script setup>
-import { Link } from '@inertiajs/vue3';
-import SiteWorkspaceLayout from '@/Components/Sites/SiteWorkspaceLayout.vue';
+import { Link } from "@inertiajs/vue3";
+import SiteWorkspaceLayout from "@/Components/Sites/SiteWorkspaceLayout.vue";
 
 defineProps({
     site: {
@@ -23,8 +23,16 @@ defineProps({
                     Heartbeats and site activity timeline will be surfaced here.
                 </p>
                 <div class="card-actions justify-end gap-2">
-                    <Link :href="route('sites.workspace.deployments', site.id)" class="btn btn-sm btn-outline">See Deployments</Link>
-                    <Link :href="route('sites.workspace.commands', site.id)" class="btn btn-sm btn-primary">See Commands</Link>
+                    <Link
+                        :href="route('sites.workspace.deployments', site.id)"
+                        class="btn btn-sm btn-outline"
+                        >See Deployments</Link
+                    >
+                    <Link
+                        :href="route('sites.workspace.commands', site.id)"
+                        class="btn btn-sm btn-primary"
+                        >See Commands</Link
+                    >
                 </div>
             </div>
         </div>

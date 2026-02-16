@@ -101,17 +101,26 @@ const handleControl = (action) => {
                     :id="`service-actions-${serviceKey}`"
                 >
                     <li v-if="status !== 'running'">
-                        <button type="button" @click="handleControl('start')">Start</button>
+                        <button type="button" @click="handleControl('start')">
+                            Start
+                        </button>
                     </li>
                     <li v-if="status === 'running'">
-                        <button type="button" @click="handleControl('restart')">Restart</button>
+                        <button type="button" @click="handleControl('restart')">
+                            Restart
+                        </button>
                     </li>
                     <li v-if="status === 'running'" class="text-error">
-                        <button type="button" @click="handleControl('stop')">Stop</button>
+                        <button type="button" @click="handleControl('stop')">
+                            Stop
+                        </button>
                     </li>
                 </ul>
             </div>
-            <span v-else class="text-[10px] uppercase tracking-wider opacity-40">
+            <span
+                v-else
+                class="text-[10px] uppercase tracking-wider opacity-40"
+            >
                 monitor
             </span>
         </div>

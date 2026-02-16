@@ -85,18 +85,20 @@ const systemStatsWithMeta = computed(() => {
 
 const servicesWithIcons = computed(() => {
     return props.services.map((service) => {
-        const icon = {
-            "Nginx Web Server": GlobeAltIcon,
-            "Caddy Web Server": GlobeAltIcon,
-            "PHP-FPM": ServerIcon,
-            Firewalld: ShieldCheckIcon,
-            Supervisor: ViewColumnsIcon,
-        }[service.name] ?? ServerIcon;
+        const icon =
+            {
+                "Nginx Web Server": GlobeAltIcon,
+                "Caddy Web Server": GlobeAltIcon,
+                "PHP-FPM": ServerIcon,
+                Firewalld: ShieldCheckIcon,
+                Supervisor: ViewColumnsIcon,
+            }[service.name] ?? ServerIcon;
 
         return {
             ...service,
             icon,
-            serviceKey: service.key ?? service.name.toLowerCase().replace(/\s+/g, "-"),
+            serviceKey:
+                service.key ?? service.name.toLowerCase().replace(/\s+/g, "-"),
         };
     });
 });
@@ -197,7 +199,9 @@ const updateWebServer = (id, webServer) => {
                                 <span class="badge badge-sm badge-outline">{{
                                     server.os_version || "Detecting..."
                                 }}</span>
-                                <span class="badge badge-sm badge-outline uppercase">
+                                <span
+                                    class="badge badge-sm badge-outline uppercase"
+                                >
                                     {{ server.web_server || "nginx" }}
                                 </span>
                                 <span
@@ -221,12 +225,20 @@ const updateWebServer = (id, webServer) => {
                             <div class="flex flex-col gap-2">
                                 <div class="form-control">
                                     <label class="label py-0">
-                                        <span class="label-text text-xs">Web Server</span>
+                                        <span class="label-text text-xs"
+                                            >Web Server</span
+                                        >
                                     </label>
                                     <select
                                         class="select select-xs select-bordered"
                                         :value="server.web_server || 'nginx'"
-                                        @change="(event) => updateWebServer(server.id, event.target.value)"
+                                        @change="
+                                            (event) =>
+                                                updateWebServer(
+                                                    server.id,
+                                                    event.target.value,
+                                                )
+                                        "
                                     >
                                         <option value="nginx">Nginx</option>
                                         <option value="caddy">Caddy</option>
@@ -243,7 +255,12 @@ const updateWebServer = (id, webServer) => {
                                     </button>
                                     <Link
                                         class="btn btn-xs btn-outline"
-                                        :href="route('servers.sites.index', server.id)"
+                                        :href="
+                                            route(
+                                                'servers.sites.index',
+                                                server.id,
+                                            )
+                                        "
                                     >
                                         Manage
                                     </Link>
@@ -394,16 +411,26 @@ const updateWebServer = (id, webServer) => {
                             context="Expected mode is Enforcing for hardened production hosts."
                         />
 
-                        <div class="card border p-4" :class="{
-                            'bg-success/10 border-success/20': security.firewall_active,
-                            'bg-error/10 border-error/20': !security.firewall_active,
-                        }">
-                            <div class="flex items-center gap-2" :class="{
-                                'text-success': security.firewall_active,
-                                'text-error': !security.firewall_active,
-                            }">
+                        <div
+                            class="card border p-4"
+                            :class="{
+                                'bg-success/10 border-success/20':
+                                    security.firewall_active,
+                                'bg-error/10 border-error/20':
+                                    !security.firewall_active,
+                            }"
+                        >
+                            <div
+                                class="flex items-center gap-2"
+                                :class="{
+                                    'text-success': security.firewall_active,
+                                    'text-error': !security.firewall_active,
+                                }"
+                            >
                                 <ShieldCheckIcon class="h-5 w-5" />
-                                <span class="font-bold text-sm">Firewall Status</span>
+                                <span class="font-bold text-sm"
+                                    >Firewall Status</span
+                                >
                             </div>
                             <p class="text-xs mt-1 opacity-80">
                                 Firewalld is
@@ -411,8 +438,7 @@ const updateWebServer = (id, webServer) => {
                                     security.firewall_active
                                         ? "active"
                                         : "not active"
-                                }}.
-                                Services: {{ firewallServices }}.
+                                }}. Services: {{ firewallServices }}.
                             </p>
                         </div>
                     </div>

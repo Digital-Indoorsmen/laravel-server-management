@@ -4,6 +4,9 @@ namespace App\Services;
 
 class PanelHealthService
 {
+    /**
+     * @return array<int, array{name: string, value: int, unit: string}>
+     */
     public function systemStats(): array
     {
         $stats = [

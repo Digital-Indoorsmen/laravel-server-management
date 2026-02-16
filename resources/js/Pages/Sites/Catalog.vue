@@ -1,7 +1,7 @@
 <script setup>
-import AppLayout from '@/Layouts/AppLayout.vue';
-import { Head, Link } from '@inertiajs/vue3';
-import { GlobeAltIcon } from '@heroicons/vue/24/outline';
+import AppLayout from "@/Layouts/AppLayout.vue";
+import { Head, Link } from "@inertiajs/vue3";
+import { GlobeAltIcon } from "@heroicons/vue/24/outline";
 
 defineProps({
     sites: {
@@ -21,7 +21,9 @@ defineProps({
     <AppLayout>
         <div class="space-y-6">
             <div>
-                <h1 class="text-2xl font-bold tracking-tight text-base-content flex items-center gap-2">
+                <h1
+                    class="text-2xl font-bold tracking-tight text-base-content flex items-center gap-2"
+                >
                     <GlobeAltIcon class="h-8 w-8 text-primary" />
                     Sites
                 </h1>
@@ -44,32 +46,64 @@ defineProps({
                             </tr>
                         </thead>
                         <tbody>
-                            <tr v-for="site in sites" :key="site.id" class="hover">
+                            <tr
+                                v-for="site in sites"
+                                :key="site.id"
+                                class="hover"
+                            >
                                 <td>
-                                    <div class="font-bold">{{ site.domain }}</div>
-                                    <div class="text-xs opacity-60">{{ site.document_root }}</div>
+                                    <div class="font-bold">
+                                        {{ site.domain }}
+                                    </div>
+                                    <div class="text-xs opacity-60">
+                                        {{ site.document_root }}
+                                    </div>
                                 </td>
                                 <td>
-                                    <div class="font-semibold">{{ site.server?.name || 'Unknown' }}</div>
-                                    <div class="text-xs opacity-60">{{ site.server?.ip_address }}</div>
+                                    <div class="font-semibold">
+                                        {{ site.server?.name || "Unknown" }}
+                                    </div>
+                                    <div class="text-xs opacity-60">
+                                        {{ site.server?.ip_address }}
+                                    </div>
                                 </td>
-                                <td class="uppercase">{{ site.web_server || site.server?.web_server || 'nginx' }}</td>
+                                <td class="uppercase">
+                                    {{
+                                        site.web_server ||
+                                        site.server?.web_server ||
+                                        "nginx"
+                                    }}
+                                </td>
                                 <td>{{ site.php_version }}</td>
                                 <td>
-                                    <span class="badge badge-sm" :class="{
-                                        'badge-success': site.status === 'active',
-                                        'badge-warning': site.status === 'creating',
-                                        'badge-error': site.status === 'error',
-                                    }">
+                                    <span
+                                        class="badge badge-sm"
+                                        :class="{
+                                            'badge-success':
+                                                site.status === 'active',
+                                            'badge-warning':
+                                                site.status === 'creating',
+                                            'badge-error':
+                                                site.status === 'error',
+                                        }"
+                                    >
                                         {{ site.status }}
                                     </span>
                                 </td>
                                 <td class="flex gap-2">
-                                    <Link :href="route('sites.show', site.id)" class="btn btn-xs btn-ghost">
+                                    <Link
+                                        :href="route('sites.show', site.id)"
+                                        class="btn btn-xs btn-ghost"
+                                    >
                                         Details
                                     </Link>
                                     <Link
-                                        :href="route('servers.sites.index', site.server.id)"
+                                        :href="
+                                            route(
+                                                'servers.sites.index',
+                                                site.server.id,
+                                            )
+                                        "
                                         class="btn btn-xs btn-outline"
                                     >
                                         Server Sites
@@ -77,7 +111,10 @@ defineProps({
                                 </td>
                             </tr>
                             <tr v-if="sites.length === 0">
-                                <td colspan="6" class="text-center py-8 text-base-content/50">
+                                <td
+                                    colspan="6"
+                                    class="text-center py-8 text-base-content/50"
+                                >
                                     No sites found yet.
                                 </td>
                             </tr>

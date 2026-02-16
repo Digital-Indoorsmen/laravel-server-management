@@ -1,6 +1,6 @@
 <script setup>
-import { Link } from '@inertiajs/vue3';
-import SiteWorkspaceLayout from '@/Components/Sites/SiteWorkspaceLayout.vue';
+import { Link } from "@inertiajs/vue3";
+import SiteWorkspaceLayout from "@/Components/Sites/SiteWorkspaceLayout.vue";
 
 defineProps({
     site: {
@@ -20,11 +20,20 @@ defineProps({
             <div class="card-body gap-4">
                 <h2 class="card-title">Command History Pending</h2>
                 <p class="text-sm text-base-content/70">
-                    Site-scoped command execution and output history will be available here.
+                    Site-scoped command execution and output history will be
+                    available here.
                 </p>
                 <div class="card-actions justify-end gap-2">
-                    <Link :href="route('sites.workspace.processes', site.id)" class="btn btn-sm btn-outline">Manage Processes</Link>
-                    <Link :href="route('sites.workspace.network', site.id)" class="btn btn-sm btn-primary">Configure Network</Link>
+                    <Link
+                        :href="route('sites.workspace.processes', site.id)"
+                        class="btn btn-sm btn-outline"
+                        >Manage Processes</Link
+                    >
+                    <Link
+                        :href="route('sites.workspace.network', site.id)"
+                        class="btn btn-sm btn-primary"
+                        >Configure Network</Link
+                    >
                 </div>
             </div>
         </div>

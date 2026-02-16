@@ -105,13 +105,22 @@ const themes = [
                     class="menu menu-sm dropdown-content mt-3 z-[1] p-2 shadow-xl bg-base-100 border border-base-300 rounded-box w-52"
                     id="user-menu-list"
                 >
-                    <div class="px-4 py-2 border-b border-base-300 mb-2">
-                        <p class="text-sm font-bold">{{ user.name }}</p>
-                        <p class="text-xs text-base-content/60 truncate">
-                            {{ user.email }}
-                        </p>
-                    </div>
-                    <li><Link :href="route('profile.show')" id="profile-link">Profile</Link></li>
+                    <li class="menu-title border-b border-base-300 pb-2 mb-2">
+                        <div class="flex flex-col gap-0.5">
+                            <span class="text-sm font-bold text-base-content">{{
+                                user.name
+                            }}</span>
+                            <span
+                                class="text-xs text-base-content/60 truncate lowercase font-normal"
+                                >{{ user.email }}</span
+                            >
+                        </div>
+                    </li>
+                    <li>
+                        <Link :href="route('profile.show')" id="profile-link"
+                            >Profile</Link
+                        >
+                    </li>
                     <li>
                         <Link :href="route('settings.index')" id="settings-link"
                             >Settings</Link

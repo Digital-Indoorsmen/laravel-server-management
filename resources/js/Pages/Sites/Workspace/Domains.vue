@@ -1,6 +1,6 @@
 <script setup>
-import { Link } from '@inertiajs/vue3';
-import SiteWorkspaceLayout from '@/Components/Sites/SiteWorkspaceLayout.vue';
+import { Link } from "@inertiajs/vue3";
+import SiteWorkspaceLayout from "@/Components/Sites/SiteWorkspaceLayout.vue";
 
 defineProps({
     site: {
@@ -20,11 +20,20 @@ defineProps({
             <div class="card-body gap-4">
                 <h2 class="card-title">Domain Controls Pending</h2>
                 <p class="text-sm text-base-content/70">
-                    Domain aliases, primary domain choice, and certificate workflows will be managed from this tab.
+                    Domain aliases, primary domain choice, and certificate
+                    workflows will be managed from this tab.
                 </p>
                 <div class="card-actions justify-end gap-2">
-                    <Link :href="route('sites.workspace.network', site.id)" class="btn btn-sm btn-outline">Review Network</Link>
-                    <Link :href="route('sites.workspace.settings', site.id)" class="btn btn-sm btn-primary">Review Site Settings</Link>
+                    <Link
+                        :href="route('sites.workspace.network', site.id)"
+                        class="btn btn-sm btn-outline"
+                        >Review Network</Link
+                    >
+                    <Link
+                        :href="route('sites.workspace.settings', site.id)"
+                        class="btn btn-sm btn-primary"
+                        >Review Site Settings</Link
+                    >
                 </div>
             </div>
         </div>
