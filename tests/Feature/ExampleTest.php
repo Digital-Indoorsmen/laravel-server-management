@@ -1,7 +1,7 @@
 <?php
 
-test('the application returns a successful response', function () {
+test('the application blocks anonymous dashboard access', function () {
     $response = $this->get('/');
 
-    $response->assertStatus(200);
+    $response->assertUnauthorized();
 });

@@ -3,33 +3,35 @@
 use Illuminate\Support\Facades\Route;
 use Inertia\Inertia;
 
-Route::get('/', function () {
-    return redirect()->route('dashboard');
-});
-
-Route::get('/dashboard', function () {
-    return Inertia::render('Dashboard', [
-        'servers' => \App\Models\Server::with('sshKey')->latest()->get(),
-    ]);
-})->name('dashboard');
-
-Route::get('/settings', [App\Http\Controllers\SettingsController::class, 'index'])->name('settings.index');
-Route::patch('/settings', [App\Http\Controllers\SettingsController::class, 'update'])->name('settings.update');
-
 Route::get('/setup/{token}', [App\Http\Controllers\SetupScriptController::class, 'show'])->name('setup.script');
 Route::post('/setup/{token}/callback', [App\Http\Controllers\SetupScriptController::class, 'callback'])->name('setup.callback')
     ->withoutMiddleware([\App\Http\Middleware\VerifyCsrfToken::class]); // Allow callback from script
 
-Route::get('/ssh-keys', [App\Http\Controllers\SshKeyController::class, 'index'])->name('ssh-keys.index');
-Route::post('/ssh-keys', [App\Http\Controllers\SshKeyController::class, 'store'])->name('ssh-keys.store');
-Route::post('/ssh-keys/import', [App\Http\Controllers\SshKeyController::class, 'import'])->name('ssh-keys.import');
-Route::get('/ssh-keys/{sshKey}/download', [App\Http\Controllers\SshKeyController::class, 'download'])->name('ssh-keys.download');
-Route::delete('/ssh-keys/{sshKey}', [App\Http\Controllers\SshKeyController::class, 'destroy'])->name('ssh-keys.destroy');
+Route::middleware('auth.basic')->group(function (): void {
+    Route::get('/', function () {
+        return redirect()->route('dashboard');
+    });
 
-Route::post('/servers/{server}/test', [App\Http\Controllers\ServerController::class, 'testConnection'])->name('servers.test');
-Route::get('/servers/{server}/logs', [App\Http\Controllers\ServerController::class, 'logs'])->name('servers.logs');
-Route::patch('/servers/{server}/web-server', [App\Http\Controllers\ServerController::class, 'updateWebServer'])->name('servers.web-server.update');
+    Route::get('/dashboard', function () {
+        return Inertia::render('Dashboard', [
+            'servers' => \App\Models\Server::with('sshKey')->latest()->get(),
+        ]);
+    })->name('dashboard');
 
-Route::resource('servers.sites', App\Http\Controllers\SiteController::class)->shallow();
-Route::get('/sites/{site}/env', [App\Http\Controllers\SiteController::class, 'env'])->name('sites.env');
-Route::put('/sites/{site}/env', [App\Http\Controllers\SiteController::class, 'updateEnv'])->name('sites.env.update');
+    Route::get('/settings', [App\Http\Controllers\SettingsController::class, 'index'])->name('settings.index');
+    Route::patch('/settings', [App\Http\Controllers\SettingsController::class, 'update'])->name('settings.update');
+
+    Route::get('/ssh-keys', [App\Http\Controllers\SshKeyController::class, 'index'])->name('ssh-keys.index');
+    Route::post('/ssh-keys', [App\Http\Controllers\SshKeyController::class, 'store'])->name('ssh-keys.store');
+    Route::post('/ssh-keys/import', [App\Http\Controllers\SshKeyController::class, 'import'])->name('ssh-keys.import');
+    Route::get('/ssh-keys/{sshKey}/download', [App\Http\Controllers\SshKeyController::class, 'download'])->name('ssh-keys.download');
+    Route::delete('/ssh-keys/{sshKey}', [App\Http\Controllers\SshKeyController::class, 'destroy'])->name('ssh-keys.destroy');
+
+    Route::post('/servers/{server}/test', [App\Http\Controllers\ServerController::class, 'testConnection'])->name('servers.test');
+    Route::get('/servers/{server}/logs', [App\Http\Controllers\ServerController::class, 'logs'])->name('servers.logs');
+    Route::patch('/servers/{server}/web-server', [App\Http\Controllers\ServerController::class, 'updateWebServer'])->name('servers.web-server.update');
+
+    Route::resource('servers.sites', App\Http\Controllers\SiteController::class)->shallow();
+    Route::get('/sites/{site}/env', [App\Http\Controllers\SiteController::class, 'env'])->name('sites.env');
+    Route::put('/sites/{site}/env', [App\Http\Controllers\SiteController::class, 'updateEnv'])->name('sites.env.update');
+});

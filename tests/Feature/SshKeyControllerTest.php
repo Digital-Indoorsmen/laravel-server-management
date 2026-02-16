@@ -1,14 +1,17 @@
 <?php
 
 use App\Models\SshKey;
+use App\Models\User;
 use Inertia\Testing\AssertableInertia as Assert;
 
 uses(Illuminate\Foundation\Testing\RefreshDatabase::class);
 
 it('renders the ssh keys index page', function () {
     SshKey::factory()->count(3)->create();
+    $user = User::factory()->create();
 
-    $response = $this->get(route('ssh-keys.index'));
+    $response = $this->actingAs($user)
+        ->get(route('ssh-keys.index'));
 
     $response->assertStatus(200);
     $response->assertInertia(fn (Assert $page) => $page
@@ -19,8 +22,10 @@ it('renders the ssh keys index page', function () {
 
 it('can delete an ssh key', function () {
     $key = SshKey::factory()->create();
+    $user = User::factory()->create();
 
-    $response = $this->delete(route('ssh-keys.destroy', $key));
+    $response = $this->actingAs($user)
+        ->delete(route('ssh-keys.destroy', $key));
 
     $response->assertRedirect();
     $this->assertDatabaseMissing('ssh_keys', ['id' => $key->id]);
@@ -28,11 +33,13 @@ it('can delete an ssh key', function () {
 
 it('can import an existing ssh key', function () {
     $publicKey = 'ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIPX7I8P/N/P+X7I8P/N/P+X7I8P/N/P+X7I8P/N/P+X7 test@host';
+    $user = User::factory()->create();
 
-    $response = $this->post(route('ssh-keys.import'), [
-        'name' => 'My Imported Key',
-        'public_key' => $publicKey,
-    ]);
+    $response = $this->actingAs($user)
+        ->post(route('ssh-keys.import'), [
+            'name' => 'My Imported Key',
+            'public_key' => $publicKey,
+        ]);
 
     $response->assertRedirect();
     $this->assertDatabaseHas('ssh_keys', [
@@ -46,8 +53,10 @@ it('can download a generated ssh key', function () {
     $key = SshKey::factory()->create([
         'private_key' => 'FAKE PRIVATE KEY',
     ]);
+    $user = User::factory()->create();
 
-    $response = $this->get(route('ssh-keys.download', $key));
+    $response = $this->actingAs($user)
+        ->get(route('ssh-keys.download', $key));
 
     $response->assertSuccessful();
     $response->assertHeader('Content-Disposition', 'attachment; filename="'.str($key->name)->slug().'_id_ed25519"');
@@ -58,8 +67,10 @@ it('cannot download an imported ssh key', function () {
     $key = SshKey::factory()->create([
         'private_key' => null,
     ]);
+    $user = User::factory()->create();
 
-    $response = $this->get(route('ssh-keys.download', $key));
+    $response = $this->actingAs($user)
+        ->get(route('ssh-keys.download', $key));
 
     $response->assertRedirect();
     $response->assertSessionHas('error');
