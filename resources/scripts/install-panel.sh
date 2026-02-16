@@ -437,9 +437,12 @@ log "Configuring PHP-FPM socket for ${PANEL_WEB_SERVER}..."
 sed -i "s/^user = .*/user = ${PANEL_WEB_SERVER}/" /etc/php-fpm.d/www.conf
 sed -i "s/^group = .*/group = ${PANEL_WEB_SERVER}/" /etc/php-fpm.d/www.conf
 sed -i 's|^listen = .*|listen = /run/php-fpm/www.sock|' /etc/php-fpm.d/www.conf
-sed -i "s/^;listen.owner = .*/listen.owner = ${PANEL_WEB_SERVER}/" /etc/php-fpm.d/www.conf
-sed -i "s/^;listen.group = .*/listen.group = ${PANEL_WEB_SERVER}/" /etc/php-fpm.d/www.conf
-sed -i 's/^;listen.mode = .*/listen.mode = 0660/' /etc/php-fpm.d/www.conf
+sed -i -E "s/^;?listen.owner = .*/listen.owner = ${PANEL_WEB_SERVER}/" /etc/php-fpm.d/www.conf
+sed -i -E "s/^;?listen.group = .*/listen.group = ${PANEL_WEB_SERVER}/" /etc/php-fpm.d/www.conf
+sed -i -E 's/^;?listen.mode = .*/listen.mode = 0660/' /etc/php-fpm.d/www.conf
+# Disable socket ACL overrides so listen.owner/group/mode actually apply.
+sed -i -E 's/^listen.acl_users =.*/;listen.acl_users =/' /etc/php-fpm.d/www.conf
+sed -i -E 's/^listen.acl_groups =.*/;listen.acl_groups =/' /etc/php-fpm.d/www.conf
 
 server_name="${PANEL_DOMAIN:-_}"
 

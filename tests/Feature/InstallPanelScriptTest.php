@@ -38,6 +38,8 @@ it('includes a one-line AlmaLinux and Rocky installer script with critical setup
     expect($script)->toContain('bun install --frozen-lockfile --force --no-cache --no-verify');
     expect($script)->toContain('bun run build failed; retrying once...');
     expect($script)->toContain('Panel admin email: ${PANEL_ADMIN_EMAIL}');
+    expect($script)->toContain('s/^listen.acl_users =.*/;listen.acl_users =/');
+    expect($script)->toContain('s/^listen.acl_groups =.*/;listen.acl_groups =/');
     expect($script)->toContain('SQLite needs directory write access for -wal/-shm files at runtime.');
     expect($script)->toContain('chown -R "${PANEL_APP_USER}:${PANEL_WEB_SERVER}" "${db_dir}"');
     expect($script)->toContain('find "${db_dir}" -maxdepth 1 -type f -name \'database.sqlite*\' -exec chmod 664 {} \\;');
