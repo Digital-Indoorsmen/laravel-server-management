@@ -41,7 +41,7 @@ it('includes a one-line AlmaLinux and Rocky installer script with critical setup
     expect($script)->toContain('chown -R "${PANEL_APP_USER}:${PANEL_WEB_SERVER}" "${db_dir}"');
     expect($script)->toContain('find "${db_dir}" -maxdepth 1 -type f -name \'database.sqlite*\' -exec chmod 664 {} \\;');
     expect($script)->toContain('semanage fcontext -d "/run/php-fpm(/.*)?" >/dev/null 2>&1 || true');
-    expect($script)->toContain('/var/run/php-fpm(/.*)?');
+    expect($script)->toContain('semanage fcontext -d "/var/run/php-fpm(/.*)?" >/dev/null 2>&1 || true');
     expect($script)->toContain('artisan migrate --force');
     expect($script)->toContain('laravel-queue.service');
 });

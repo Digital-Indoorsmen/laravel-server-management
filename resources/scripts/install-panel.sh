@@ -500,11 +500,11 @@ semanage fcontext -a -t httpd_sys_rw_content_t "${PANEL_APP_DIR}/database(/.*)?"
 if [[ "${PANEL_WEB_SERVER}" == "caddy" ]]; then
     semanage fcontext -a -t httpd_config_t "/etc/caddy(/.*)?" || semanage fcontext -m -t httpd_config_t "/etc/caddy(/.*)?"
     semanage fcontext -d "/run/php-fpm(/.*)?" >/dev/null 2>&1 || true
-    semanage fcontext -a -t httpd_sys_rw_content_t "/var/run/php-fpm(/.*)?" || semanage fcontext -m -t httpd_sys_rw_content_t "/var/run/php-fpm(/.*)?"
+    semanage fcontext -d "/var/run/php-fpm(/.*)?" >/dev/null 2>&1 || true
 fi
 restorecon -Rv "${PANEL_APP_DIR}"
 if [[ "${PANEL_WEB_SERVER}" == "caddy" ]]; then
-    restorecon -Rv /etc/caddy /var/run/php-fpm /run/php-fpm || true
+    restorecon -Rv /etc/caddy /run/php-fpm /var/run/php-fpm || true
 fi
 setsebool -P httpd_can_network_connect 1
 if [[ "${PANEL_WEB_SERVER}" == "caddy" ]]; then
