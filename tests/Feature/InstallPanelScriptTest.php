@@ -16,6 +16,7 @@ it('includes a one-line AlmaLinux and Rocky installer script with critical setup
     expect($script)->toContain('PANEL_WEB_SERVER');
     expect($script)->toContain('PANEL_PROMPTS');
     expect($script)->toContain('PANEL_ADMIN_EMAIL');
+    expect($script)->toContain('PANEL_ADMIN_PASSWORD_MODE');
     expect($script)->toContain('artisan panel:collect-install-options --shell-file="${prompt_output_file}" < /dev/tty');
     expect($script)->toContain('artisan panel:ensure-admin-user --shell');
     expect($script)->toContain('Writing Caddy config...');
@@ -40,6 +41,7 @@ it('includes a one-line AlmaLinux and Rocky installer script with critical setup
     expect($script)->toContain('bun install --frozen-lockfile --force --no-cache --no-verify');
     expect($script)->toContain('bun run build failed; retrying once...');
     expect($script)->toContain('Panel admin email: ${PANEL_ADMIN_EMAIL}');
+    expect($script)->toContain('Panel admin password was kept from existing account.');
     expect($script)->toContain('s/^listen.acl_users =.*/;listen.acl_users =/');
     expect($script)->toContain('s/^listen.acl_groups =.*/;listen.acl_groups =/');
     expect($script)->toContain('SQLite needs directory write access for -wal/-shm files at runtime.');

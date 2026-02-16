@@ -11,6 +11,7 @@ test('ensure admin user command creates a user and returns shell credentials', f
     putenv('PANEL_ADMIN_NAME=Primary Admin');
     putenv('PANEL_ADMIN_EMAIL=admin@example.test');
     putenv('PANEL_ADMIN_PASSWORD=');
+    putenv('PANEL_ADMIN_PASSWORD_MODE=regenerate');
 
     Artisan::call('panel:ensure-admin-user', [
         '--shell' => true,
@@ -35,4 +36,40 @@ test('ensure admin user command creates a user and returns shell credentials', f
     putenv('PANEL_ADMIN_NAME');
     putenv('PANEL_ADMIN_EMAIL');
     putenv('PANEL_ADMIN_PASSWORD');
+    putenv('PANEL_ADMIN_PASSWORD_MODE');
+});
+
+test('ensure admin user command can keep existing password', function () {
+    $existing = User::factory()->create([
+        'name' => 'Original Name',
+        'email' => 'admin@example.test',
+        'password' => 'existing-secret',
+    ]);
+
+    $existingPasswordHash = $existing->password;
+
+    putenv('PANEL_ADMIN_NAME=Updated Name');
+    putenv('PANEL_ADMIN_EMAIL=admin@example.test');
+    putenv('PANEL_ADMIN_PASSWORD=');
+    putenv('PANEL_ADMIN_PASSWORD_MODE=keep');
+
+    Artisan::call('panel:ensure-admin-user', [
+        '--shell' => true,
+    ]);
+
+    $output = Artisan::output();
+
+    expect($output)->toContain("PANEL_ADMIN_PASSWORD_REUSED='1'");
+    expect($output)->toContain("PANEL_ADMIN_PASSWORD_AVAILABLE='0'");
+
+    $updated = User::query()->where('email', 'admin@example.test')->first();
+
+    expect($updated)->not->toBeNull();
+    expect($updated?->name)->toBe('Updated Name');
+    expect($updated?->password)->toBe($existingPasswordHash);
+
+    putenv('PANEL_ADMIN_NAME');
+    putenv('PANEL_ADMIN_EMAIL');
+    putenv('PANEL_ADMIN_PASSWORD');
+    putenv('PANEL_ADMIN_PASSWORD_MODE');
 });

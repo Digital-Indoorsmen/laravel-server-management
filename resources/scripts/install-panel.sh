@@ -59,6 +59,14 @@ PANEL_PROMPTS="${PANEL_PROMPTS:-1}"
 PANEL_ADMIN_NAME="${PANEL_ADMIN_NAME:-Panel Admin}"
 PANEL_ADMIN_EMAIL="${PANEL_ADMIN_EMAIL:-${PANEL_EMAIL}}"
 PANEL_ADMIN_PASSWORD="${PANEL_ADMIN_PASSWORD:-}"
+PANEL_ADMIN_PASSWORD_MODE="${PANEL_ADMIN_PASSWORD_MODE:-}"
+if [[ -z "${PANEL_ADMIN_PASSWORD_MODE}" ]]; then
+    if [[ -n "${PANEL_ADMIN_PASSWORD}" ]]; then
+        PANEL_ADMIN_PASSWORD_MODE="provided"
+    else
+        PANEL_ADMIN_PASSWORD_MODE="regenerate"
+    fi
+fi
 
 php_bin="/usr/bin/php"
 
@@ -331,6 +339,7 @@ if [[ "${PANEL_PROMPTS}" == "1" && -e /dev/tty ]]; then
         PANEL_ADMIN_NAME="${PANEL_ADMIN_NAME}" \
         PANEL_ADMIN_EMAIL="${PANEL_ADMIN_EMAIL}" \
         PANEL_ADMIN_PASSWORD="${PANEL_ADMIN_PASSWORD}" \
+        PANEL_ADMIN_PASSWORD_MODE="${PANEL_ADMIN_PASSWORD_MODE}" \
         PANEL_USE_SSL="${PANEL_USE_SSL}" \
         PANEL_INSTALL_CERTBOT="${PANEL_INSTALL_CERTBOT}" \
         "${php_bin}" artisan panel:collect-install-options --shell-file="${prompt_output_file}" < /dev/tty
@@ -420,11 +429,12 @@ admin_output_file="$(mktemp)"
 
 if (
     cd "${PANEL_APP_DIR}"
-    PANEL_ADMIN_NAME="${PANEL_ADMIN_NAME}" \
-    PANEL_ADMIN_EMAIL="${PANEL_ADMIN_EMAIL}" \
-    PANEL_ADMIN_PASSWORD="${PANEL_ADMIN_PASSWORD}" \
-    PANEL_EMAIL="${PANEL_EMAIL}" \
-    "${php_bin}" artisan panel:ensure-admin-user --shell
+PANEL_ADMIN_NAME="${PANEL_ADMIN_NAME}" \
+PANEL_ADMIN_EMAIL="${PANEL_ADMIN_EMAIL}" \
+PANEL_ADMIN_PASSWORD="${PANEL_ADMIN_PASSWORD}" \
+PANEL_ADMIN_PASSWORD_MODE="${PANEL_ADMIN_PASSWORD_MODE}" \
+PANEL_EMAIL="${PANEL_EMAIL}" \
+"${php_bin}" artisan panel:ensure-admin-user --shell
 ) > "${admin_output_file}"; then
     # shellcheck disable=SC1090
     source "${admin_output_file}"
@@ -435,7 +445,9 @@ else
     exit 1
 fi
 
-if [[ "${PANEL_ADMIN_PASSWORD_GENERATED:-0}" == "1" ]]; then
+if [[ "${PANEL_ADMIN_PASSWORD_REUSED:-0}" == "1" ]]; then
+    log "Panel admin password kept from existing account."
+elif [[ "${PANEL_ADMIN_PASSWORD_GENERATED:-0}" == "1" ]]; then
     credentials_file="/root/panel-admin-credentials.txt"
     cat > "${credentials_file}" <<EOF
 PANEL_URL=${app_url}
@@ -619,6 +631,8 @@ log "Panel URL: ${app_url}"
 log "Panel admin email: ${PANEL_ADMIN_EMAIL}"
 if [[ "${PANEL_ADMIN_PASSWORD_GENERATED:-0}" == "1" ]]; then
     log "Panel admin password was generated and saved to /root/panel-admin-credentials.txt"
+elif [[ "${PANEL_ADMIN_PASSWORD_REUSED:-0}" == "1" ]]; then
+    log "Panel admin password was kept from existing account."
 else
     log "Panel admin password was provided through PANEL_ADMIN_PASSWORD."
 fi
