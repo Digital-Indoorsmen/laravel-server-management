@@ -55,6 +55,9 @@ PANEL_APP_DIR="${PANEL_APP_DIR:-/var/www/laravel-server-management}"
 PANEL_USE_SSL="${PANEL_USE_SSL:-1}"
 PANEL_INSTALL_CERTBOT="${PANEL_INSTALL_CERTBOT:-1}"
 PANEL_PROMPTS="${PANEL_PROMPTS:-1}"
+PANEL_ADMIN_NAME="${PANEL_ADMIN_NAME:-Panel Admin}"
+PANEL_ADMIN_EMAIL="${PANEL_ADMIN_EMAIL:-${PANEL_EMAIL}}"
+PANEL_ADMIN_PASSWORD="${PANEL_ADMIN_PASSWORD:-}"
 
 php_bin="/usr/bin/php"
 
@@ -112,7 +115,7 @@ install_js_dependencies_with_retries() {
     fi
 
     log "bun install --frozen-lockfile failed; clearing Bun cache and node_modules, then retrying..."
-    run_as_panel "${bun_shell} bun pm cache rm || true; rm -rf \"\$HOME/.bun/install/cache\" \"\$HOME/.cache/bun\""
+    run_as_panel "${bun_shell} cd \"\$HOME\" && bun pm cache rm || true; rm -rf \"\$HOME/.bun/install/cache\" \"\$HOME/.cache/bun\""
     run_as_panel "${bun_shell} cd '${PANEL_APP_DIR}' && rm -rf node_modules"
 
     if run_as_panel "${bun_shell} cd '${PANEL_APP_DIR}' && bun install --frozen-lockfile --force --no-cache"; then
@@ -120,7 +123,7 @@ install_js_dependencies_with_retries() {
     fi
 
     log "bun install retry failed; clearing Bun cache and node_modules, then trying one final time with --no-verify..."
-    run_as_panel "${bun_shell} bun pm cache rm || true; rm -rf \"\$HOME/.bun/install/cache\" \"\$HOME/.cache/bun\""
+    run_as_panel "${bun_shell} cd \"\$HOME\" && bun pm cache rm || true; rm -rf \"\$HOME/.bun/install/cache\" \"\$HOME/.cache/bun\""
     run_as_panel "${bun_shell} cd '${PANEL_APP_DIR}' && rm -rf node_modules && bun install --frozen-lockfile --force --no-cache --no-verify"
 }
 
@@ -237,6 +240,9 @@ if [[ "${PANEL_PROMPTS}" == "1" && -t 0 && -t 1 ]]; then
         PANEL_WEB_SERVER="${PANEL_WEB_SERVER}" \
         PANEL_DOMAIN="${PANEL_DOMAIN}" \
         PANEL_EMAIL="${PANEL_EMAIL}" \
+        PANEL_ADMIN_NAME="${PANEL_ADMIN_NAME}" \
+        PANEL_ADMIN_EMAIL="${PANEL_ADMIN_EMAIL}" \
+        PANEL_ADMIN_PASSWORD="${PANEL_ADMIN_PASSWORD}" \
         PANEL_USE_SSL="${PANEL_USE_SSL}" \
         PANEL_INSTALL_CERTBOT="${PANEL_INSTALL_CERTBOT}" \
         "${php_bin}" artisan panel:collect-install-options --shell
@@ -251,7 +257,8 @@ if [[ "${PANEL_PROMPTS}" == "1" && -t 0 && -t 1 ]]; then
 
     rm -f "${prompt_output_file}"
 else
-    log "Skipping Laravel Prompts wizard (set PANEL_PROMPTS=1 in interactive mode to enable)."
+    log "Skipping Laravel Prompts wizard because this run is non-interactive (no TTY)."
+    log "For interactive setup, download and run the script directly in a terminal with PANEL_PROMPTS=1."
 fi
 
 if [[ "${PANEL_APP_GROUP_IS_DEFAULT}" == "1" ]]; then
@@ -312,6 +319,36 @@ chmod 664 "${PANEL_APP_DIR}/database/database.sqlite"
 
 log "Discovering Laravel packages..."
 run_as_panel "cd '${PANEL_APP_DIR}' && ${php_bin} artisan package:discover --ansi"
+
+log "Ensuring panel admin user..."
+admin_output_file="$(mktemp)"
+
+if (
+    cd "${PANEL_APP_DIR}"
+    PANEL_ADMIN_NAME="${PANEL_ADMIN_NAME}" \
+    PANEL_ADMIN_EMAIL="${PANEL_ADMIN_EMAIL}" \
+    PANEL_ADMIN_PASSWORD="${PANEL_ADMIN_PASSWORD}" \
+    PANEL_EMAIL="${PANEL_EMAIL}" \
+    "${php_bin}" artisan panel:ensure-admin-user --shell
+) > "${admin_output_file}"; then
+    # shellcheck disable=SC1090
+    source "${admin_output_file}"
+    rm -f "${admin_output_file}"
+else
+    rm -f "${admin_output_file}"
+    log "Unable to create panel admin user. Set PANEL_ADMIN_EMAIL (or PANEL_EMAIL) and rerun."
+    exit 1
+fi
+
+if [[ "${PANEL_ADMIN_PASSWORD_GENERATED:-0}" == "1" ]]; then
+    credentials_file="/root/panel-admin-credentials.txt"
+    cat > "${credentials_file}" <<EOF
+PANEL_URL=${app_url}
+PANEL_ADMIN_EMAIL=${PANEL_ADMIN_EMAIL}
+PANEL_ADMIN_PASSWORD=${PANEL_ADMIN_PASSWORD}
+EOF
+    chmod 600 "${credentials_file}"
+fi
 
 log "Running Laravel setup commands..."
 current_app_key="$(grep -E '^APP_KEY=' "${PANEL_APP_DIR}/.env" | tail -n1 | cut -d'=' -f2- || true)"
@@ -476,5 +513,11 @@ fi
 log "Install complete."
 log "Web server: ${PANEL_WEB_SERVER}"
 log "Panel URL: ${app_url}"
+log "Panel admin email: ${PANEL_ADMIN_EMAIL}"
+if [[ "${PANEL_ADMIN_PASSWORD_GENERATED:-0}" == "1" ]]; then
+    log "Panel admin password was generated and saved to /root/panel-admin-credentials.txt"
+else
+    log "Panel admin password was provided through PANEL_ADMIN_PASSWORD."
+fi
 log "Health check endpoint: ${app_url}/up"
 log "Install log: ${LOG_FILE}"

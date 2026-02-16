@@ -58,6 +58,8 @@ class CollectInstallOptions extends Command
             'PANEL_WEB_SERVER' => $webServer,
             'PANEL_DOMAIN' => (string) (getenv('PANEL_DOMAIN') ?: ''),
             'PANEL_EMAIL' => (string) (getenv('PANEL_EMAIL') ?: ''),
+            'PANEL_ADMIN_NAME' => (string) (getenv('PANEL_ADMIN_NAME') ?: 'Panel Admin'),
+            'PANEL_ADMIN_EMAIL' => (string) (getenv('PANEL_ADMIN_EMAIL') ?: getenv('PANEL_EMAIL') ?: ''),
             'PANEL_USE_SSL' => $this->toBooleanString(getenv('PANEL_USE_SSL'), true),
             'PANEL_INSTALL_CERTBOT' => $this->toBooleanString(getenv('PANEL_INSTALL_CERTBOT'), true),
         ];
@@ -124,6 +126,23 @@ class CollectInstallOptions extends Command
             if ($settings['PANEL_DOMAIN'] === '') {
                 warning('Domain left empty. The panel will be served by server IP.');
             }
+
+            $settings['PANEL_ADMIN_NAME'] = trim(text(
+                label: 'Panel admin display name',
+                default: $settings['PANEL_ADMIN_NAME']
+            ));
+
+            $settings['PANEL_ADMIN_EMAIL'] = trim(text(
+                label: 'Panel admin login email',
+                default: $settings['PANEL_ADMIN_EMAIL'],
+                validate: function (string $value): ?string {
+                    if (filter_var($value, FILTER_VALIDATE_EMAIL)) {
+                        return null;
+                    }
+
+                    return 'Enter a valid admin email address.';
+                }
+            ));
 
             outro('Installer options captured.');
         } finally {

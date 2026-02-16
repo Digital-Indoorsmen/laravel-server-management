@@ -14,7 +14,9 @@ it('includes a one-line AlmaLinux and Rocky installer script with critical setup
     expect($script)->toContain('PANEL_WEB_SERVER must be either');
     expect($script)->toContain('PANEL_WEB_SERVER');
     expect($script)->toContain('PANEL_PROMPTS');
+    expect($script)->toContain('PANEL_ADMIN_EMAIL');
     expect($script)->toContain('artisan panel:collect-install-options --shell');
+    expect($script)->toContain('artisan panel:ensure-admin-user --shell');
     expect($script)->toContain('Writing Caddy config...');
     expect($script)->toContain('Writing Nginx vhost...');
     expect($script)->toContain('ensure_group_exists');
@@ -26,10 +28,12 @@ it('includes a one-line AlmaLinux and Rocky installer script with critical setup
     expect($script)->toContain('Multiple JS lockfiles detected. Keep only bun.lock for Bun-only installs.');
     expect($script)->toContain('Unsupported JS lockfile detected. Commit bun.lock and remove other lockfiles.');
     expect($script)->toContain('bun install --frozen-lockfile failed; clearing Bun cache and node_modules, then retrying...');
-    expect($script)->toContain('bun pm cache rm || true');
+    expect($script)->toContain('cd \"\$HOME\" && bun pm cache rm || true');
+    expect($script)->toContain('Skipping Laravel Prompts wizard because this run is non-interactive (no TTY).');
     expect($script)->toContain('bun install --frozen-lockfile --force --no-cache');
     expect($script)->toContain('bun install --frozen-lockfile --force --no-cache --no-verify');
     expect($script)->toContain('bun run build failed; retrying once...');
+    expect($script)->toContain('Panel admin email: ${PANEL_ADMIN_EMAIL}');
     expect($script)->toContain('artisan migrate --force');
     expect($script)->toContain('laravel-queue.service');
 });
