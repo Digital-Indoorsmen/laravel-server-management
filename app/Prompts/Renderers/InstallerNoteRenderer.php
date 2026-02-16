@@ -2,8 +2,10 @@
 
 namespace App\Prompts\Renderers;
 
+use Chewie\Art;
 use Chewie\Concerns\Aligns;
 use Chewie\Concerns\DrawsArt;
+use Chewie\Output\Lines;
 use Laravel\Prompts\Note;
 use Laravel\Prompts\Themes\Default\Renderer;
 
@@ -38,11 +40,40 @@ class InstallerNoteRenderer extends Renderer
     protected function renderIntro(Note $note): void
     {
         $width = $note->terminal()->cols();
+        $projectName = mb_strtolower((string) config('app.name', 'Laravel Server Manager'));
 
-        if (file_exists(resource_path('art/panel-installer.txt'))) {
-            $this->centerHorizontally($this->artLines('panel-installer'), $width)
-                ->each(function (string $line): void {
-                    $this->line($this->cyan($line));
+        if (is_dir(resource_path('art/characters'))) {
+            Art::setDirectory(resource_path('art/characters'));
+
+            $messageLines = wordwrap(
+                string: $projectName,
+                width: max((int) floor($width / 7), 1),
+                cut_long_words: true,
+            );
+
+            collect(explode(PHP_EOL, $messageLines))
+                ->map(fn (string $line): array => mb_str_split($line))
+                ->map(function (array $letters): array {
+                    return array_map(function (string $letter): array {
+                        return match ($letter) {
+                            ' ' => array_fill(0, 7, str_repeat(' ', 4)),
+                            '.' => $this->artLines('period'),
+                            ',' => $this->artLines('comma'),
+                            '?' => $this->artLines('question-mark'),
+                            '!' => $this->artLines('exclamation-point'),
+                            "'" => $this->artLines('apostrophe'),
+                            default => file_exists(resource_path("art/characters/{$letter}.txt"))
+                                ? $this->artLines($letter)
+                                : array_fill(0, 7, str_repeat(' ', 4)),
+                        };
+                    }, $letters);
+                })
+                ->flatMap(fn (array $letters): array => Lines::fromColumns($letters)->lines())
+                ->pipe(function ($lines) use ($width): void {
+                    $this->centerHorizontally($lines->toArray(), $width)
+                        ->each(function (string $line): void {
+                            $this->line($this->cyan($line));
+                        });
                 });
         }
 
