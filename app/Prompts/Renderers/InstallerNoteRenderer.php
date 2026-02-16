@@ -6,6 +6,7 @@ use Chewie\Art;
 use Chewie\Concerns\Aligns;
 use Chewie\Concerns\DrawsArt;
 use Chewie\Output\Lines;
+use Illuminate\Support\Collection;
 use Laravel\Prompts\Note;
 use Laravel\Prompts\Themes\Default\Renderer;
 
@@ -57,13 +58,13 @@ class InstallerNoteRenderer extends Renderer
                     return array_map(function (string $letter): array {
                         return match ($letter) {
                             ' ' => array_fill(0, 7, str_repeat(' ', 4)),
-                            '.' => $this->artLines('period'),
-                            ',' => $this->artLines('comma'),
-                            '?' => $this->artLines('question-mark'),
-                            '!' => $this->artLines('exclamation-point'),
-                            "'" => $this->artLines('apostrophe'),
+                            '.' => $this->glyphLines('period'),
+                            ',' => $this->glyphLines('comma'),
+                            '?' => $this->glyphLines('question-mark'),
+                            '!' => $this->glyphLines('exclamation-point'),
+                            "'" => $this->glyphLines('apostrophe'),
                             default => file_exists(resource_path("art/characters/{$letter}.txt"))
-                                ? $this->artLines($letter)
+                                ? $this->glyphLines($letter)
                                 : array_fill(0, 7, str_repeat(' ', 4)),
                         };
                     }, $letters);
@@ -83,5 +84,19 @@ class InstallerNoteRenderer extends Renderer
             ->each(function (string $line): void {
                 $this->line($this->bgCyan($this->black(" {$line} ")));
             });
+    }
+
+    /**
+     * @return array<int, string>
+     */
+    protected function glyphLines(string $glyph): array
+    {
+        $lines = $this->artLines($glyph);
+
+        if ($lines instanceof Collection) {
+            return $lines->toArray();
+        }
+
+        return $lines;
     }
 }
