@@ -93,6 +93,19 @@ reset_and_set_fcontext() {
     semanage fcontext -a -t "${label}" "${pattern}"
 }
 
+reset_php_fpm_runtime_selinux_contexts() {
+    if ! command -v semanage >/dev/null 2>&1; then
+        return 0
+    fi
+
+    semanage fcontext -d "/run/php-fpm(/.*)?" >/dev/null 2>&1 || true
+    semanage fcontext -d "/var/run/php-fpm(/.*)?" >/dev/null 2>&1 || true
+
+    if command -v restorecon >/dev/null 2>&1; then
+        restorecon -Rv /run/php-fpm /var/run/php-fpm >/dev/null 2>&1 || true
+    fi
+}
+
 repair_sqlite_runtime_access() {
     local db_dir="${PANEL_APP_DIR}/database"
     local db_file="${db_dir}/database.sqlite"
@@ -329,6 +342,7 @@ else
     install_packages nginx
 fi
 
+reset_php_fpm_runtime_selinux_contexts
 ensure_service_running php-fpm
 disable_conflicting_web_server "${PANEL_WEB_SERVER}"
 ensure_service_running "${PANEL_WEB_SERVER}"
@@ -509,8 +523,7 @@ if command -v semanage >/dev/null 2>&1; then
 
     if [[ "${PANEL_WEB_SERVER}" == "caddy" ]]; then
         reset_and_set_fcontext "/etc/caddy(/.*)?" "httpd_config_t"
-        semanage fcontext -d "/run/php-fpm(/.*)?" >/dev/null 2>&1 || true
-        semanage fcontext -d "/var/run/php-fpm(/.*)?" >/dev/null 2>&1 || true
+        reset_php_fpm_runtime_selinux_contexts
     fi
 fi
 restorecon -Rv "${PANEL_APP_DIR}"

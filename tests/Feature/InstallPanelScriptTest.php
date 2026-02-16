@@ -28,6 +28,7 @@ it('includes a one-line AlmaLinux and Rocky installer script with critical setup
     expect($script)->toContain('install_js_dependencies_with_retries');
     expect($script)->toContain('build_js_assets_with_retry');
     expect($script)->toContain('disable_conflicting_web_server');
+    expect($script)->toContain('reset_php_fpm_runtime_selinux_contexts');
     expect($script)->toContain('Multiple JS lockfiles detected. Keep only bun.lock for Bun-only installs.');
     expect($script)->toContain('Unsupported JS lockfile detected. Commit bun.lock and remove other lockfiles.');
     expect($script)->toContain('bun install --frozen-lockfile failed; clearing Bun cache and node_modules, then retrying...');
@@ -41,7 +42,6 @@ it('includes a one-line AlmaLinux and Rocky installer script with critical setup
     expect($script)->toContain('chown -R "${PANEL_APP_USER}:${PANEL_WEB_SERVER}" "${db_dir}"');
     expect($script)->toContain('find "${db_dir}" -maxdepth 1 -type f -name \'database.sqlite*\' -exec chmod 664 {} \\;');
     expect($script)->toContain('semanage fcontext -d "/run/php-fpm(/.*)?" >/dev/null 2>&1 || true');
-    expect($script)->toContain('semanage fcontext -d "/var/run/php-fpm(/.*)?" >/dev/null 2>&1 || true');
     expect($script)->toContain('artisan migrate --force');
     expect($script)->toContain('laravel-queue.service');
 });
