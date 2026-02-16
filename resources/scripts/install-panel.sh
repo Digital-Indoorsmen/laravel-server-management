@@ -84,6 +84,27 @@ run_as_panel() {
     runuser -u "${PANEL_APP_USER}" -- bash -lc "${command}"
 }
 
+repair_sqlite_runtime_access() {
+    local db_dir="${PANEL_APP_DIR}/database"
+    local db_file="${db_dir}/database.sqlite"
+
+    mkdir -p "${db_dir}"
+    touch "${db_file}"
+
+    # SQLite needs directory write access for -wal/-shm files at runtime.
+    chown -R "${PANEL_APP_USER}:${PANEL_WEB_SERVER}" "${db_dir}"
+    chmod 775 "${db_dir}"
+    find "${db_dir}" -maxdepth 1 -type f -name 'database.sqlite*' -exec chmod 664 {} \;
+
+    if command -v semanage >/dev/null 2>&1; then
+        semanage fcontext -a -t httpd_sys_rw_content_t "${db_dir}(/.*)?" || semanage fcontext -m -t httpd_sys_rw_content_t "${db_dir}(/.*)?"
+    fi
+
+    if command -v restorecon >/dev/null 2>&1; then
+        restorecon -Rv "${db_dir}" || true
+    fi
+}
+
 validate_js_lockfiles() {
     local lockfile_count
     lockfile_count="$(find "${PANEL_APP_DIR}" -maxdepth 1 -type f \( -name 'bun.lock' -o -name 'bun.lockb' -o -name 'package-lock.json' -o -name 'yarn.lock' -o -name 'pnpm-lock.yaml' \) | wc -l | tr -d ' ')"
@@ -314,10 +335,7 @@ set_env_value "${PANEL_APP_DIR}/.env" "CACHE_STORE" "database"
 set_env_value "${PANEL_APP_DIR}/.env" "QUEUE_CONNECTION" "database"
 
 touch "${PANEL_APP_DIR}/database/database.sqlite"
-chown "${PANEL_APP_USER}:${PANEL_APP_GROUP}" "${PANEL_APP_DIR}/database/database.sqlite"
-chmod 664 "${PANEL_APP_DIR}/database/database.sqlite"
-chown -R "${PANEL_APP_USER}:${PANEL_APP_GROUP}" "${PANEL_APP_DIR}/database"
-chmod 775 "${PANEL_APP_DIR}/database"
+repair_sqlite_runtime_access
 
 log "Discovering Laravel packages..."
 run_as_panel "cd '${PANEL_APP_DIR}' && ${php_bin} artisan package:discover --ansi"
@@ -367,7 +385,7 @@ run_as_panel "cd '${PANEL_APP_DIR}' && ${php_bin} artisan config:cache"
 log "Setting runtime permissions..."
 chown -R "${PANEL_APP_USER}:${PANEL_APP_GROUP}" "${PANEL_APP_DIR}"
 chmod -R 775 "${PANEL_APP_DIR}/storage" "${PANEL_APP_DIR}/bootstrap/cache"
-chmod 775 "${PANEL_APP_DIR}/database"
+repair_sqlite_runtime_access
 
 log "Configuring PHP-FPM socket for ${PANEL_WEB_SERVER}..."
 sed -i "s/^user = .*/user = ${PANEL_WEB_SERVER}/" /etc/php-fpm.d/www.conf

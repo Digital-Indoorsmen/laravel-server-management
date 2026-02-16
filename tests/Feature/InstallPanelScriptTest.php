@@ -23,6 +23,7 @@ it('includes a one-line AlmaLinux and Rocky installer script with critical setup
     expect($script)->toContain('APP_KEY already present; skipping key generation.');
     expect($script)->toContain('composer install --no-dev --optimize-autoloader --no-scripts');
     expect($script)->toContain('artisan package:discover --ansi');
+    expect($script)->toContain('repair_sqlite_runtime_access');
     expect($script)->toContain('install_js_dependencies_with_retries');
     expect($script)->toContain('build_js_assets_with_retry');
     expect($script)->toContain('Multiple JS lockfiles detected. Keep only bun.lock for Bun-only installs.');
@@ -34,8 +35,9 @@ it('includes a one-line AlmaLinux and Rocky installer script with critical setup
     expect($script)->toContain('bun install --frozen-lockfile --force --no-cache --no-verify');
     expect($script)->toContain('bun run build failed; retrying once...');
     expect($script)->toContain('Panel admin email: ${PANEL_ADMIN_EMAIL}');
-    expect($script)->toContain('chmod 775 "${PANEL_APP_DIR}/database"');
-    expect($script)->toContain('semanage fcontext -a -t httpd_sys_rw_content_t "${PANEL_APP_DIR}/database(/.*)?"');
+    expect($script)->toContain('SQLite needs directory write access for -wal/-shm files at runtime.');
+    expect($script)->toContain('chown -R "${PANEL_APP_USER}:${PANEL_WEB_SERVER}" "${db_dir}"');
+    expect($script)->toContain('find "${db_dir}" -maxdepth 1 -type f -name \'database.sqlite*\' -exec chmod 664 {} \\;');
     expect($script)->toContain('artisan migrate --force');
     expect($script)->toContain('laravel-queue.service');
 });
