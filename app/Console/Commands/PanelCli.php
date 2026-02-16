@@ -2,9 +2,12 @@
 
 namespace App\Console\Commands;
 
+use App\Jobs\InstallDatabaseEngine;
 use App\Jobs\RunSiteDeployment;
+use App\Models\DatabaseEngineInstallation;
 use App\Models\Server;
 use App\Models\Site;
+use App\Services\DatabaseProvisioningService;
 use App\Services\PanelHealthService;
 use App\Services\SiteDeploymentService;
 use App\Services\SiteProvisioningService;
@@ -22,11 +25,11 @@ use function Laravel\Prompts\text;
 class PanelCli extends Command
 {
     protected $signature = 'panel:cli
-        {action? : status, update, new:site, site:deploy, or help}
-        {target? : Site id for site:deploy}
+        {action? : status, update, new:site, site:deploy, database:install, or help}
+        {target? : Site id for site:deploy or database type for database:install}
         {--dry-run : Preview update commands without executing them}
         {--branch=main : Branch to deploy for site:deploy}
-        {--server= : Target server id for new:site}
+        {--server= : Target server id for new:site or database:install}
         {--domain= : Domain for new:site}
         {--system-user= : Linux system user for new:site}
         {--php-version= : PHP version for new:site}
@@ -36,12 +39,13 @@ class PanelCli extends Command
         {--database-type= : Database type for new:site}
         {--provision=1 : Run provisioning after creating site (0/1)}';
 
-    protected $description = 'Panel CLI entrypoint for status, updates, site creation, and deployments';
+    protected $description = 'Panel CLI entrypoint for status, updates, site creation, deployments, and database installation';
 
     public function __construct(
         protected PanelHealthService $panelHealth,
         protected SiteProvisioningService $siteProvisioning,
-        protected SiteDeploymentService $siteDeploymentService
+        protected SiteDeploymentService $siteDeploymentService,
+        protected DatabaseProvisioningService $databaseProvisioning
     ) {
         parent::__construct();
     }
@@ -54,7 +58,7 @@ class PanelCli extends Command
             return $this->showAvailableCommands();
         }
 
-        if (! in_array($action, ['status', 'update', 'new:site', 'site:deploy', 'help'], true)) {
+        if (! in_array($action, ['status', 'update', 'new:site', 'site:deploy', 'database:install', 'help'], true)) {
             $this->components->error("Unknown action [{$action}].");
 
             return $this->showAvailableCommands(self::FAILURE);
@@ -66,6 +70,7 @@ class PanelCli extends Command
             'update' => $this->runUpdate(),
             'new:site' => $this->runNewSite(),
             'site:deploy' => $this->runSiteDeploy(),
+            'database:install' => $this->runDatabaseInstall(),
             default => self::FAILURE,
         };
     }
@@ -79,12 +84,80 @@ class PanelCli extends Command
             ['larapanel update', 'Update panel software and rebuild assets'],
             ['larapanel new:site', 'Create and optionally provision a new site'],
             ['larapanel site:deploy {site}', 'Queue a deployment for a specific site'],
+            ['larapanel database:install {type}', 'Install a database engine (mariadb, postgresql)'],
             ['larapanel help', 'Show this command list'],
         ]);
 
         outro('Run one of the commands above to continue.');
 
         return $exitCode;
+    }
+
+    protected function runDatabaseInstall(): int
+    {
+        $type = strtolower((string) ($this->argument('target') ?? ''));
+
+        if ($type === '' && $this->input->isInteractive()) {
+            $type = select(
+                label: 'Which database engine should be installed?',
+                options: ['mariadb' => 'MariaDB', 'postgresql' => 'PostgreSQL'],
+            );
+        }
+
+        if (! in_array($type, ['mariadb', 'postgresql'], true)) {
+            $this->components->error("Invalid database type [{$type}]. Supported: mariadb, postgresql.");
+
+            return self::FAILURE;
+        }
+
+        $servers = Server::query()->latest()->get(['id', 'name', 'ip_address']);
+
+        if ($servers->isEmpty()) {
+            $this->components->error('No servers found.');
+
+            return self::FAILURE;
+        }
+
+        $serverId = (string) ($this->option('server') ?? '');
+
+        if ($serverId === '' && $this->input->isInteractive()) {
+            $serverId = select(
+                label: 'Which server should the engine be installed on?',
+                options: $servers->mapWithKeys(fn (Server $server): array => [
+                    (string) $server->id => "{$server->name} ({$server->ip_address})",
+                ])->all(),
+                default: (string) $servers->first()->id,
+            );
+        }
+
+        $server = $servers->firstWhere('id', $serverId);
+
+        if (! $server) {
+            $this->components->error('Invalid server id.');
+
+            return self::FAILURE;
+        }
+
+        // Check if already installed
+        if (isset($server->database_engines[$type])) {
+            $this->components->warn("{$type} is already recorded as installed on this server.");
+            if (! confirm('Do you want to proceed with installation anyway?', false)) {
+                return self::SUCCESS;
+            }
+        }
+
+        $installation = DatabaseEngineInstallation::query()->create([
+            'server_id' => $server->id,
+            'type' => $type,
+            'status' => 'queued',
+        ]);
+
+        InstallDatabaseEngine::dispatch($installation->id);
+
+        $this->components->info("Installation of {$type} queued for server {$server->name}.");
+        $this->line("You can monitor progress in the web panel or via 'larapanel status'.");
+
+        return self::SUCCESS;
     }
 
     protected function runStatus(): int

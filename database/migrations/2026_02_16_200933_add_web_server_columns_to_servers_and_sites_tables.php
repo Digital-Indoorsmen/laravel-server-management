@@ -11,13 +11,17 @@ return new class extends Migration
      */
     public function up(): void
     {
-        Schema::table('servers', function (Blueprint $table) {
-            $table->string('web_server')->default('nginx')->after('status');
-        });
+        if (Schema::hasTable('servers') && ! Schema::hasColumn('servers', 'web_server')) {
+            Schema::table('servers', function (Blueprint $table) {
+                $table->string('web_server')->default('nginx')->after('status');
+            });
+        }
 
-        Schema::table('sites', function (Blueprint $table) {
-            $table->string('web_server')->nullable()->after('app_type');
-        });
+        if (Schema::hasTable('sites') && ! Schema::hasColumn('sites', 'web_server')) {
+            Schema::table('sites', function (Blueprint $table) {
+                $table->string('web_server')->nullable()->after('app_type');
+            });
+        }
     }
 
     /**
@@ -25,12 +29,16 @@ return new class extends Migration
      */
     public function down(): void
     {
-        Schema::table('sites', function (Blueprint $table) {
-            $table->dropColumn('web_server');
-        });
+        if (Schema::hasTable('sites') && Schema::hasColumn('sites', 'web_server')) {
+            Schema::table('sites', function (Blueprint $table) {
+                $table->dropColumn('web_server');
+            });
+        }
 
-        Schema::table('servers', function (Blueprint $table) {
-            $table->dropColumn('web_server');
-        });
+        if (Schema::hasTable('servers') && Schema::hasColumn('servers', 'web_server')) {
+            Schema::table('servers', function (Blueprint $table) {
+                $table->dropColumn('web_server');
+            });
+        }
     }
 };

@@ -3,8 +3,7 @@
 use Illuminate\Support\Facades\Route;
 
 Route::get('/setup/{token}', [App\Http\Controllers\SetupScriptController::class, 'show'])->name('setup.script');
-Route::post('/setup/{token}/callback', [App\Http\Controllers\SetupScriptController::class, 'callback'])->name('setup.callback')
-    ->withoutMiddleware([\App\Http\Middleware\VerifyCsrfToken::class]); // Allow callback from script
+Route::post('/setup/{token}/callback', [App\Http\Controllers\SetupScriptController::class, 'callback'])->name('setup.callback');
 
 Route::middleware('guest')->group(function (): void {
     Route::get('/login', [App\Http\Controllers\Auth\AuthenticatedSessionController::class, 'create'])->name('login');
@@ -35,6 +34,10 @@ Route::middleware('auth')->group(function (): void {
     Route::post('/servers/{server}/test', [App\Http\Controllers\ServerController::class, 'testConnection'])->name('servers.test');
     Route::get('/servers/{server}/logs', [App\Http\Controllers\ServerController::class, 'logs'])->name('servers.logs');
     Route::patch('/servers/{server}/web-server', [App\Http\Controllers\ServerController::class, 'updateWebServer'])->name('servers.web-server.update');
+
+    Route::get('/servers/{server}/database-engines', [App\Http\Controllers\DatabaseEngineInstallationController::class, 'index'])->name('servers.database-engines.index');
+    Route::post('/servers/{server}/database-engines', [App\Http\Controllers\DatabaseEngineInstallationController::class, 'store'])->name('servers.database-engines.store');
+    Route::get('/database-engine-installations/{installation}', [App\Http\Controllers\DatabaseEngineInstallationController::class, 'show'])->name('database-engine-installations.show');
 
     Route::resource('servers.sites', App\Http\Controllers\SiteController::class)->shallow();
     Route::get('/sites/{site}/env', [App\Http\Controllers\SiteController::class, 'env'])->name('sites.env');

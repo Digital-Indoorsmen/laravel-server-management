@@ -11,9 +11,11 @@ return new class extends Migration
      */
     public function up(): void
     {
-        Schema::table('sites', function (Blueprint $table) {
-            $table->integer('mcs_id')->nullable()->unique()->after('status');
-        });
+        if (Schema::hasTable('sites') && ! Schema::hasColumn('sites', 'mcs_id')) {
+            Schema::table('sites', function (Blueprint $table) {
+                $table->integer('mcs_id')->nullable()->unique()->after('status');
+            });
+        }
     }
 
     /**
@@ -21,8 +23,10 @@ return new class extends Migration
      */
     public function down(): void
     {
-        Schema::table('sites', function (Blueprint $table) {
-            $table->dropColumn('mcs_id');
-        });
+        if (Schema::hasTable('sites') && Schema::hasColumn('sites', 'mcs_id')) {
+            Schema::table('sites', function (Blueprint $table) {
+                $table->dropColumn('mcs_id');
+            });
+        }
     }
 };

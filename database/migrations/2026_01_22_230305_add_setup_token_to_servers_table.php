@@ -11,10 +11,16 @@ return new class extends Migration
      */
     public function up(): void
     {
-        Schema::table('servers', function (Blueprint $table) {
-            $table->string('setup_token')->nullable()->unique()->after('status');
-            $table->timestamp('setup_completed_at')->nullable()->after('setup_token');
-        });
+        if (Schema::hasTable('servers')) {
+            Schema::table('servers', function (Blueprint $table) {
+                if (! Schema::hasColumn('servers', 'setup_token')) {
+                    $table->string('setup_token')->nullable()->unique()->after('status');
+                }
+                if (! Schema::hasColumn('servers', 'setup_completed_at')) {
+                    $table->timestamp('setup_completed_at')->nullable()->after('setup_token');
+                }
+            });
+        }
     }
 
     /**
@@ -22,8 +28,19 @@ return new class extends Migration
      */
     public function down(): void
     {
-        Schema::table('servers', function (Blueprint $table) {
-            $table->dropColumn(['setup_token', 'setup_completed_at']);
-        });
+        if (Schema::hasTable('servers')) {
+            Schema::table('servers', function (Blueprint $table) {
+                $columns = [];
+                if (Schema::hasColumn('servers', 'setup_token')) {
+                    $columns[] = 'setup_token';
+                }
+                if (Schema::hasColumn('servers', 'setup_completed_at')) {
+                    $columns[] = 'setup_completed_at';
+                }
+                if (count($columns) > 0) {
+                    $table->dropColumn($columns);
+                }
+            });
+        }
     }
 };

@@ -26,6 +26,7 @@ class Server extends Model
     {
         return [
             'setup_completed_at' => 'datetime',
+            'database_engines' => 'array',
         ];
     }
 
@@ -42,5 +43,10 @@ class Server extends Model
     public function sites(): \Illuminate\Database\Eloquent\Relations\HasMany
     {
         return $this->hasMany(Site::class);
+    }
+
+    public function databaseEngineInstallations(): \Illuminate\Database\Eloquent\Relations\HasMany
+    {
+        return $this->hasMany(DatabaseEngineInstallation::class);
     }
 }
