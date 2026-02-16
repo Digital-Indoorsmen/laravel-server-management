@@ -85,6 +85,14 @@ run_as_panel() {
     runuser -u "${PANEL_APP_USER}" -- bash -lc "${command}"
 }
 
+reset_and_set_fcontext() {
+    local pattern="$1"
+    local label="$2"
+
+    semanage fcontext -d "${pattern}" >/dev/null 2>&1 || true
+    semanage fcontext -a -t "${label}" "${pattern}"
+}
+
 repair_sqlite_runtime_access() {
     local db_dir="${PANEL_APP_DIR}/database"
     local db_file="${db_dir}/database.sqlite"
@@ -98,7 +106,7 @@ repair_sqlite_runtime_access() {
     find "${db_dir}" -maxdepth 1 -type f -name 'database.sqlite*' -exec chmod 664 {} \;
 
     if command -v semanage >/dev/null 2>&1; then
-        semanage fcontext -a -t httpd_sys_rw_content_t "${db_dir}(/.*)?" || semanage fcontext -m -t httpd_sys_rw_content_t "${db_dir}(/.*)?"
+        reset_and_set_fcontext "${db_dir}(/.*)?" "httpd_sys_rw_content_t"
     fi
 
     if command -v restorecon >/dev/null 2>&1; then
@@ -494,13 +502,16 @@ EOF
 fi
 
 log "Configuring SELinux and firewall..."
-semanage fcontext -a -t httpd_sys_rw_content_t "${PANEL_APP_DIR}/storage(/.*)?" || semanage fcontext -m -t httpd_sys_rw_content_t "${PANEL_APP_DIR}/storage(/.*)?"
-semanage fcontext -a -t httpd_sys_rw_content_t "${PANEL_APP_DIR}/bootstrap/cache(/.*)?" || semanage fcontext -m -t httpd_sys_rw_content_t "${PANEL_APP_DIR}/bootstrap/cache(/.*)?"
-semanage fcontext -a -t httpd_sys_rw_content_t "${PANEL_APP_DIR}/database(/.*)?" || semanage fcontext -m -t httpd_sys_rw_content_t "${PANEL_APP_DIR}/database(/.*)?"
-if [[ "${PANEL_WEB_SERVER}" == "caddy" ]]; then
-    semanage fcontext -a -t httpd_config_t "/etc/caddy(/.*)?" || semanage fcontext -m -t httpd_config_t "/etc/caddy(/.*)?"
-    semanage fcontext -d "/run/php-fpm(/.*)?" >/dev/null 2>&1 || true
-    semanage fcontext -d "/var/run/php-fpm(/.*)?" >/dev/null 2>&1 || true
+if command -v semanage >/dev/null 2>&1; then
+    reset_and_set_fcontext "${PANEL_APP_DIR}/storage(/.*)?" "httpd_sys_rw_content_t"
+    reset_and_set_fcontext "${PANEL_APP_DIR}/bootstrap/cache(/.*)?" "httpd_sys_rw_content_t"
+    reset_and_set_fcontext "${PANEL_APP_DIR}/database(/.*)?" "httpd_sys_rw_content_t"
+
+    if [[ "${PANEL_WEB_SERVER}" == "caddy" ]]; then
+        reset_and_set_fcontext "/etc/caddy(/.*)?" "httpd_config_t"
+        semanage fcontext -d "/run/php-fpm(/.*)?" >/dev/null 2>&1 || true
+        semanage fcontext -d "/var/run/php-fpm(/.*)?" >/dev/null 2>&1 || true
+    fi
 fi
 restorecon -Rv "${PANEL_APP_DIR}"
 if [[ "${PANEL_WEB_SERVER}" == "caddy" ]]; then
