@@ -157,6 +157,15 @@ fi
 
 chown -R "${PANEL_APP_USER}:${PANEL_APP_USER}" "${PANEL_APP_DIR}"
 
+if [[ ! -f "${PANEL_APP_DIR}/.env" ]]; then
+    cp "${PANEL_APP_DIR}/.env.example" "${PANEL_APP_DIR}/.env"
+fi
+
+mkdir -p "${PANEL_APP_DIR}/database"
+touch "${PANEL_APP_DIR}/database/database.sqlite"
+chown "${PANEL_APP_USER}:${PANEL_APP_USER}" "${PANEL_APP_DIR}/.env" "${PANEL_APP_DIR}/database/database.sqlite"
+chmod 664 "${PANEL_APP_DIR}/database/database.sqlite"
+
 if ! run_as_panel "command -v bun >/dev/null 2>&1"; then
     log "Installing Bun for ${PANEL_APP_USER}..."
     run_as_panel "curl -fsSL https://bun.sh/install | bash"
