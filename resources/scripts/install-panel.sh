@@ -266,7 +266,7 @@ fi
 log "Installing PHP dependencies..."
 run_as_panel "cd '${PANEL_APP_DIR}' && composer install --no-dev --optimize-autoloader --no-scripts"
 
-if [[ "${PANEL_PROMPTS}" == "1" && -t 1 && -r /dev/tty && -w /dev/tty ]]; then
+if [[ "${PANEL_PROMPTS}" == "1" && -e /dev/tty ]]; then
     if [[ -z "${PANEL_WEB_SERVER}" ]]; then
         PANEL_WEB_SERVER="nginx"
     fi
