@@ -6,7 +6,7 @@ Repository: <https://github.com/Digital-Indoorsmen/laravel-server-management>
 
 This README is a production-oriented, start-to-finish install guide for a fresh AlmaLinux or Rocky Linux 8, 9, or 10 server where you can SSH as `root`.
 
-If you want the fastest path, use the one-line installer in [One-Line Bootstrap Installer](#one-line-bootstrap-installer), then use the manual sections as reference.
+If you want the fastest path, use the installer in [Bootstrap Installer](#bootstrap-installer), then use the manual sections as reference.
 
 ## What You Are Installing
 
@@ -29,7 +29,7 @@ If you want the fastest path, use the one-line installer in [One-Line Bootstrap 
 - You have a domain (example: `panel.example.com`) pointing to this server's public IP
 - Server has outbound internet access
 
-## One-Line Bootstrap Installer
+## Bootstrap Installer
 
 This repository now includes `resources/scripts/install-panel.sh`, which performs core AlmaLinux/Rocky Linux 8/9/10 prep and app install automatically.
 
@@ -38,20 +38,30 @@ Required on target server:
 - `curl` or `wget`
 - root SSH access
 
-Recommended one-liner (`curl`):
+### Recommended (interactive with prompts)
+
+This is the default recommended path. It gives you the full installer prompts (including choosing `nginx` vs `caddy`).
 
 ```bash
-PANEL_DOMAIN=panel.example.com PANEL_EMAIL=you@example.com bash -c "$(curl -fsSL https://raw.githubusercontent.com/Digital-Indoorsmen/laravel-server-management/main/resources/scripts/install-panel.sh)"
+curl -fsSL "https://raw.githubusercontent.com/Digital-Indoorsmen/laravel-server-management/main/resources/scripts/install-panel.sh?ts=$(date +%s)" -o /tmp/install-panel.sh
+chmod +x /tmp/install-panel.sh
+PANEL_PROMPTS=1 /tmp/install-panel.sh
 ```
 
-Equivalent (`wget`):
+If you are connected remotely, make sure you have a real TTY (for example `ssh -t`), otherwise prompts cannot render.
+
+### Non-interactive (automation/CI)
+
+Use this only when you explicitly want no prompts. `PANEL_WEB_SERVER` is required.
 
 ```bash
-PANEL_DOMAIN=panel.example.com PANEL_EMAIL=you@example.com bash -c "$(wget -qO- https://raw.githubusercontent.com/Digital-Indoorsmen/laravel-server-management/main/resources/scripts/install-panel.sh)"
+PANEL_WEB_SERVER=nginx PANEL_DOMAIN=panel.example.com PANEL_EMAIL=you@example.com bash -c "$(curl -fsSL "https://raw.githubusercontent.com/Digital-Indoorsmen/laravel-server-management/main/resources/scripts/install-panel.sh?ts=$(date +%s)")"
 ```
 
 Important installer environment variables:
 
+- `PANEL_PROMPTS`: `1` for prompt mode (recommended default)
+- `PANEL_WEB_SERVER`: required for non-interactive mode, must be `nginx` or `caddy`
 - `PANEL_DOMAIN`: public domain for the panel (optional, but recommended)
 - `PANEL_EMAIL`: email used by certbot for HTTPS (required for automatic SSL)
 - `PANEL_USE_SSL`: `1` (default) or `0`
