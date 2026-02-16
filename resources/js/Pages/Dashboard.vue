@@ -1,10 +1,9 @@
 <script setup>
 import { computed } from "vue";
-import { useForm } from "@inertiajs/vue3";
+import { Link, useForm } from "@inertiajs/vue3";
 import AppLayout from "@/Layouts/AppLayout.vue";
 import ServerStatus from "@/Components/UI/ServerStatus.vue";
 import SELinuxAlert from "@/Components/UI/SELinuxAlert.vue";
-import ResourceUsage from "@/Components/UI/ResourceUsage.vue";
 import ServiceItem from "@/Components/UI/ServiceItem.vue";
 import {
     ServerIcon,
@@ -17,67 +16,31 @@ import {
     KeyIcon,
 } from "@heroicons/vue/24/outline";
 
-// Local system health metrics (semi-hardcoded for now as placeholders for real probes)
-const systemStats = [
-    {
-        name: "CPU Load",
-        value: "45",
-        icon: CpuChipIcon,
-        color: "text-blue-500",
-        unit: "%",
-    },
-    {
-        name: "RAM Usage",
-        value: "62",
-        icon: ViewColumnsIcon,
-        color: "text-green-500",
-        unit: "%",
-    },
-    {
-        name: "Disk Space",
-        value: "82",
-        icon: CircleStackIcon,
-        color: "text-purple-500",
-        unit: "%",
-    },
-    {
-        name: "Network",
-        value: "1.2",
-        icon: BoltIcon,
-        color: "text-orange-500",
-        unit: "Gbps",
-    },
-];
-
-const services = [
-    {
-        name: "Nginx Web Server",
-        status: "running",
-        version: "1.24.0",
-        icon: GlobeAltIcon,
-    },
-    {
-        name: "PHP 8.4 FPM",
-        status: "running",
-        version: "8.4.17",
-        icon: ServerIcon,
-    },
-    {
-        name: "MariaDB Database",
-        status: "running",
-        version: "10.11.6",
-        icon: CircleStackIcon,
-    },
-    {
-        name: "Redis Cache",
-        status: "stopped",
-        version: "7.2.4",
-        icon: BoltIcon,
-    },
-];
-
 const props = defineProps({
-    servers: Array,
+    servers: {
+        type: Array,
+        default: () => [],
+    },
+    systemStats: {
+        type: Array,
+        default: () => [],
+    },
+    services: {
+        type: Array,
+        default: () => [],
+    },
+    security: {
+        type: Object,
+        default: () => ({
+            selinux_mode: "Unknown",
+            firewall_active: false,
+            firewall_services: [],
+        }),
+    },
+    uptime: {
+        type: String,
+        default: "unknown",
+    },
 });
 
 const pendingServers = computed(() => {
@@ -86,6 +49,61 @@ const pendingServers = computed(() => {
 
 const activeServers = computed(() => {
     return props.servers.filter((s) => !!s.setup_completed_at);
+});
+
+const systemStatsWithMeta = computed(() => {
+    return props.systemStats.map((stat) => {
+        const metadata = {
+            "CPU Load": {
+                icon: CpuChipIcon,
+                color: "text-blue-500",
+            },
+            "RAM Usage": {
+                icon: ViewColumnsIcon,
+                color: "text-green-500",
+            },
+            "Disk Space": {
+                icon: CircleStackIcon,
+                color: "text-purple-500",
+            },
+            "Swap Usage": {
+                icon: BoltIcon,
+                color: "text-orange-500",
+            },
+        }[stat.name] ?? {
+            icon: ServerIcon,
+            color: "text-base-content",
+        };
+
+        return {
+            ...stat,
+            icon: metadata.icon,
+            color: metadata.color,
+        };
+    });
+});
+
+const servicesWithIcons = computed(() => {
+    return props.services.map((service) => {
+        const icon = {
+            "Nginx Web Server": GlobeAltIcon,
+            "Caddy Web Server": GlobeAltIcon,
+            "PHP-FPM": ServerIcon,
+            Firewalld: ShieldCheckIcon,
+            Supervisor: ViewColumnsIcon,
+        }[service.name] ?? ServerIcon;
+
+        return {
+            ...service,
+            icon,
+        };
+    });
+});
+
+const firewallServices = computed(() => {
+    return props.security.firewall_services?.length
+        ? props.security.firewall_services.join(", ")
+        : "none";
 });
 
 const getSetupCommand = (token) => {
@@ -123,18 +141,18 @@ const updateWebServer = (id, webServer) => {
                         Local Server Health
                     </h1>
                     <p class="text-base-content/60">
-                        Monitoring AlmaLinux system resources and primary
-                        services.
+                        Monitoring real host resources and service health.
                     </p>
                 </div>
                 <div class="flex items-center gap-2">
                     <span
                         class="text-xs font-mono opacity-50 bg-base-300 px-2 py-1 rounded"
-                        >UPTIME: 14d 2h 15m</span
+                        >UPTIME: {{ uptime }}</span
                     >
                     <button
                         class="btn btn-sm btn-ghost border-base-300"
                         id="refresh-probes-button"
+                        @click="() => window.location.reload()"
                     >
                         Refresh Probes
                     </button>
@@ -306,7 +324,7 @@ const updateWebServer = (id, webServer) => {
             <!-- System Stats Grid -->
             <div class="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
                 <div
-                    v-for="stat in systemStats"
+                    v-for="stat in systemStatsWithMeta"
                     :key="stat.name"
                     class="stats shadow bg-base-100 border border-base-300"
                 >
@@ -331,9 +349,9 @@ const updateWebServer = (id, webServer) => {
                             <progress
                                 class="progress w-full h-1"
                                 :class="
-                                    parseFloat(stat.value) > 80
+                                    Number(stat.value) > 80
                                         ? 'progress-error'
-                                        : parseFloat(stat.value) > 60
+                                        : Number(stat.value) > 60
                                           ? 'progress-warning'
                                           : 'progress-success'
                                 "
@@ -354,7 +372,7 @@ const updateWebServer = (id, webServer) => {
                     </h2>
                     <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
                         <ServiceItem
-                            v-for="service in services"
+                            v-for="service in servicesWithIcons"
                             :key="service.name"
                             v-bind="service"
                         />
@@ -369,22 +387,30 @@ const updateWebServer = (id, webServer) => {
                     </h2>
                     <div class="space-y-3">
                         <SELinuxAlert
-                            message="Nginx process attempted to connect to unauthorized port 8095."
-                            context="avc: denied { name_connect } for pid=1234 comm='nginx' dest=8095 scontext=system_u:system_r:httpd_t:s0 tcontext=system_u:object_r:http_port_t:s0 tclass=tcp_socket"
+                            v-if="security.selinux_mode !== 'Enforcing'"
+                            :message="`SELinux mode is ${security.selinux_mode}.`"
+                            context="Expected mode is Enforcing for hardened production hosts."
                         />
 
-                        <div
-                            class="card bg-success/10 border border-success/20 p-4"
-                        >
-                            <div class="flex items-center gap-2 text-success">
+                        <div class="card border p-4" :class="{
+                            'bg-success/10 border-success/20': security.firewall_active,
+                            'bg-error/10 border-error/20': !security.firewall_active,
+                        }">
+                            <div class="flex items-center gap-2" :class="{
+                                'text-success': security.firewall_active,
+                                'text-error': !security.firewall_active,
+                            }">
                                 <ShieldCheckIcon class="h-5 w-5" />
-                                <span class="font-bold text-sm"
-                                    >Firewall Status</span
-                                >
+                                <span class="font-bold text-sm">Firewall Status</span>
                             </div>
                             <p class="text-xs mt-1 opacity-80">
-                                Firewalld is active with 4 open ports in the
-                                'public' zone.
+                                Firewalld is
+                                {{
+                                    security.firewall_active
+                                        ? "active"
+                                        : "not active"
+                                }}.
+                                Services: {{ firewallServices }}.
                             </p>
                         </div>
                     </div>

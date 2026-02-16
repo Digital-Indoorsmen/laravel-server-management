@@ -1,7 +1,6 @@
 <?php
 
 use Illuminate\Support\Facades\Route;
-use Inertia\Inertia;
 
 Route::get('/setup/{token}', [App\Http\Controllers\SetupScriptController::class, 'show'])->name('setup.script');
 Route::post('/setup/{token}/callback', [App\Http\Controllers\SetupScriptController::class, 'callback'])->name('setup.callback')
@@ -12,11 +11,7 @@ Route::middleware('auth.basic')->group(function (): void {
         return redirect()->route('dashboard');
     });
 
-    Route::get('/dashboard', function () {
-        return Inertia::render('Dashboard', [
-            'servers' => \App\Models\Server::with('sshKey')->latest()->get(),
-        ]);
-    })->name('dashboard');
+    Route::get('/dashboard', App\Http\Controllers\DashboardController::class)->name('dashboard');
 
     Route::get('/settings', [App\Http\Controllers\SettingsController::class, 'index'])->name('settings.index');
     Route::patch('/settings', [App\Http\Controllers\SettingsController::class, 'update'])->name('settings.update');
