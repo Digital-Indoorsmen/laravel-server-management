@@ -1,7 +1,7 @@
 <?php
 
-test('the application blocks anonymous dashboard access', function () {
+test('the application redirects anonymous users to login', function () {
     $response = $this->get('/');
 
-    $response->assertUnauthorized();
+    $response->assertRedirect(route('login'));
 });

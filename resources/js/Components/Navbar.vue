@@ -120,7 +120,7 @@ const themes = [
 
                     <li>
                         <Link
-                            href="/logout"
+                            :href="route('logout')"
                             method="post"
                             as="button"
                             class="text-error w-full text-left"

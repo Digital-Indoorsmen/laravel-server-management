@@ -6,7 +6,12 @@ Route::get('/setup/{token}', [App\Http\Controllers\SetupScriptController::class,
 Route::post('/setup/{token}/callback', [App\Http\Controllers\SetupScriptController::class, 'callback'])->name('setup.callback')
     ->withoutMiddleware([\App\Http\Middleware\VerifyCsrfToken::class]); // Allow callback from script
 
-Route::middleware('auth.basic')->group(function (): void {
+Route::middleware('guest')->group(function (): void {
+    Route::get('/login', [App\Http\Controllers\Auth\AuthenticatedSessionController::class, 'create'])->name('login');
+    Route::post('/login', [App\Http\Controllers\Auth\AuthenticatedSessionController::class, 'store'])->name('login.store');
+});
+
+Route::middleware('auth')->group(function (): void {
     Route::get('/', function () {
         return redirect()->route('dashboard');
     });
@@ -29,4 +34,5 @@ Route::middleware('auth.basic')->group(function (): void {
     Route::resource('servers.sites', App\Http\Controllers\SiteController::class)->shallow();
     Route::get('/sites/{site}/env', [App\Http\Controllers\SiteController::class, 'env'])->name('sites.env');
     Route::put('/sites/{site}/env', [App\Http\Controllers\SiteController::class, 'updateEnv'])->name('sites.env.update');
+    Route::post('/logout', [App\Http\Controllers\Auth\AuthenticatedSessionController::class, 'destroy'])->name('logout');
 });
