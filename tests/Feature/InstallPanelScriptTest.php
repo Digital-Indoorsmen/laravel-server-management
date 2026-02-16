@@ -12,6 +12,7 @@ it('includes a one-line AlmaLinux and Rocky installer script with critical setup
     expect($script)->toContain('This installer supports AlmaLinux and Rocky Linux only.');
     expect($script)->toContain('This installer supports AlmaLinux/Rocky Linux versions 9 and 10 only.');
     expect($script)->toContain('PANEL_WEB_SERVER must be either');
+    expect($script)->toContain("Non-interactive mode requires PANEL_WEB_SERVER to be explicitly set to 'nginx' or 'caddy'.");
     expect($script)->toContain('PANEL_WEB_SERVER');
     expect($script)->toContain('PANEL_PROMPTS');
     expect($script)->toContain('PANEL_ADMIN_EMAIL');
@@ -26,6 +27,7 @@ it('includes a one-line AlmaLinux and Rocky installer script with critical setup
     expect($script)->toContain('repair_sqlite_runtime_access');
     expect($script)->toContain('install_js_dependencies_with_retries');
     expect($script)->toContain('build_js_assets_with_retry');
+    expect($script)->toContain('disable_conflicting_web_server');
     expect($script)->toContain('Multiple JS lockfiles detected. Keep only bun.lock for Bun-only installs.');
     expect($script)->toContain('Unsupported JS lockfile detected. Commit bun.lock and remove other lockfiles.');
     expect($script)->toContain('bun install --frozen-lockfile failed; clearing Bun cache and node_modules, then retrying...');

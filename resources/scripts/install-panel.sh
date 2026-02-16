@@ -40,8 +40,9 @@ PANEL_EMAIL="${PANEL_EMAIL:-}"
 PANEL_REPO="${PANEL_REPO:-https://github.com/Digital-Indoorsmen/laravel-server-management.git}"
 PANEL_BRANCH="${PANEL_BRANCH:-main}"
 PANEL_APP_USER="${PANEL_APP_USER:-panel}"
-PANEL_WEB_SERVER="$(echo "${PANEL_WEB_SERVER:-nginx}" | tr '[:upper:]' '[:lower:]')"
-if [[ "${PANEL_WEB_SERVER}" != "nginx" && "${PANEL_WEB_SERVER}" != "caddy" ]]; then
+PANEL_WEB_SERVER="${PANEL_WEB_SERVER:-}"
+PANEL_WEB_SERVER="$(echo "${PANEL_WEB_SERVER}" | tr '[:upper:]' '[:lower:]')"
+if [[ -n "${PANEL_WEB_SERVER}" && "${PANEL_WEB_SERVER}" != "nginx" && "${PANEL_WEB_SERVER}" != "caddy" ]]; then
     log "PANEL_WEB_SERVER must be either 'nginx' or 'caddy'."
     exit 1
 fi
@@ -164,6 +165,19 @@ ensure_service_running() {
     systemctl enable --now "${name}"
 }
 
+disable_conflicting_web_server() {
+    local active_server="$1"
+    local conflicting_server="nginx"
+
+    if [[ "${active_server}" == "nginx" ]]; then
+        conflicting_server="caddy"
+    fi
+
+    if systemctl list-unit-files "${conflicting_server}.service" >/dev/null 2>&1; then
+        systemctl disable --now "${conflicting_server}" >/dev/null 2>&1 || true
+    fi
+}
+
 ensure_group_exists() {
     local name="$1"
     if ! getent group "${name}" >/dev/null 2>&1; then
@@ -253,6 +267,10 @@ log "Installing PHP dependencies..."
 run_as_panel "cd '${PANEL_APP_DIR}' && composer install --no-dev --optimize-autoloader --no-scripts"
 
 if [[ "${PANEL_PROMPTS}" == "1" && -t 0 && -t 1 ]]; then
+    if [[ -z "${PANEL_WEB_SERVER}" ]]; then
+        PANEL_WEB_SERVER="nginx"
+    fi
+
     log "Launching Laravel Prompts installer wizard..."
     prompt_output_file="$(mktemp)"
 
@@ -278,6 +296,11 @@ if [[ "${PANEL_PROMPTS}" == "1" && -t 0 && -t 1 ]]; then
 
     rm -f "${prompt_output_file}"
 else
+    if [[ -z "${PANEL_WEB_SERVER}" ]]; then
+        log "Non-interactive mode requires PANEL_WEB_SERVER to be explicitly set to 'nginx' or 'caddy'."
+        exit 1
+    fi
+
     log "Skipping Laravel Prompts wizard because this run is non-interactive (no TTY)."
     log "For interactive setup, download and run the script directly in a terminal with PANEL_PROMPTS=1."
 fi
@@ -299,6 +322,7 @@ else
 fi
 
 ensure_service_running php-fpm
+disable_conflicting_web_server "${PANEL_WEB_SERVER}"
 ensure_service_running "${PANEL_WEB_SERVER}"
 usermod -aG "${PANEL_APP_GROUP}" "${PANEL_APP_USER}" || true
 
