@@ -7,13 +7,27 @@ import {
 } from "@heroicons/vue/24/solid";
 
 defineProps({
+    serviceKey: {
+        type: String,
+        required: true,
+    },
     name: String,
     status: {
         type: String, // 'running', 'stopped', 'failed', 'starting'
         default: "stopped",
     },
     version: String,
+    controlsEnabled: {
+        type: Boolean,
+        default: false,
+    },
 });
+
+const emit = defineEmits(["control"]);
+
+const handleControl = (action) => {
+    emit("control", action);
+};
 </script>
 
 <template>
@@ -64,7 +78,40 @@ defineProps({
             >
                 {{ status }}
             </span>
-            <span class="text-[10px] uppercase tracking-wider opacity-40">
+            <div v-if="controlsEnabled" class="dropdown dropdown-end">
+                <button tabindex="0" class="btn btn-ghost btn-xs btn-square">
+                    <svg
+                        xmlns="http://www.w3.org/2000/svg"
+                        fill="none"
+                        viewBox="0 0 24 24"
+                        stroke-width="1.5"
+                        stroke="currentColor"
+                        class="w-4 h-4"
+                    >
+                        <path
+                            stroke-linecap="round"
+                            stroke-linejoin="round"
+                            d="M12 6.75a.75.75 0 1 1 0-1.5.75.75 0 0 1 0 1.5ZM12 12.75a.75.75 0 1 1 0-1.5.75.75 0 0 1 0 1.5ZM12 18.75a.75.75 0 1 1 0-1.5.75.75 0 0 1 0 1.5Z"
+                        />
+                    </svg>
+                </button>
+                <ul
+                    tabindex="0"
+                    class="dropdown-content menu p-2 shadow-lg bg-base-100 border border-base-300 rounded-box w-36 z-30"
+                    :id="`service-actions-${serviceKey}`"
+                >
+                    <li v-if="status !== 'running'">
+                        <button type="button" @click="handleControl('start')">Start</button>
+                    </li>
+                    <li v-if="status === 'running'">
+                        <button type="button" @click="handleControl('restart')">Restart</button>
+                    </li>
+                    <li v-if="status === 'running'" class="text-error">
+                        <button type="button" @click="handleControl('stop')">Stop</button>
+                    </li>
+                </ul>
+            </div>
+            <span v-else class="text-[10px] uppercase tracking-wider opacity-40">
                 monitor
             </span>
         </div>

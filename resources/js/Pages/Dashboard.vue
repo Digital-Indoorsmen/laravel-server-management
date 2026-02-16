@@ -96,6 +96,7 @@ const servicesWithIcons = computed(() => {
         return {
             ...service,
             icon,
+            serviceKey: service.key ?? service.name.toLowerCase().replace(/\s+/g, "-"),
         };
     });
 });
@@ -374,6 +375,7 @@ const updateWebServer = (id, webServer) => {
                         <ServiceItem
                             v-for="service in servicesWithIcons"
                             :key="service.name"
+                            :service-key="service.serviceKey"
                             v-bind="service"
                         />
                     </div>

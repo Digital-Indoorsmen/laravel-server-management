@@ -85,6 +85,20 @@ run_as_panel() {
     runuser -u "${PANEL_APP_USER}" -- bash -lc "${command}"
 }
 
+configure_service_control_sudoers() {
+    local sudoers_file="/etc/sudoers.d/laravel-panel-service-control"
+
+    cat > "${sudoers_file}" <<EOF
+Defaults:${PANEL_WEB_SERVER} !requiretty
+Defaults:${PANEL_APP_USER} !requiretty
+${PANEL_WEB_SERVER} ALL=(root) NOPASSWD: /usr/bin/systemctl start nginx, /usr/bin/systemctl restart nginx, /usr/bin/systemctl stop nginx, /usr/bin/systemctl start caddy, /usr/bin/systemctl restart caddy, /usr/bin/systemctl stop caddy, /usr/bin/systemctl start php-fpm, /usr/bin/systemctl restart php-fpm, /usr/bin/systemctl stop php-fpm, /usr/bin/systemctl start firewalld, /usr/bin/systemctl restart firewalld, /usr/bin/systemctl stop firewalld, /usr/bin/systemctl start supervisord, /usr/bin/systemctl restart supervisord, /usr/bin/systemctl stop supervisord, /bin/systemctl start nginx, /bin/systemctl restart nginx, /bin/systemctl stop nginx, /bin/systemctl start caddy, /bin/systemctl restart caddy, /bin/systemctl stop caddy, /bin/systemctl start php-fpm, /bin/systemctl restart php-fpm, /bin/systemctl stop php-fpm, /bin/systemctl start firewalld, /bin/systemctl restart firewalld, /bin/systemctl stop firewalld, /bin/systemctl start supervisord, /bin/systemctl restart supervisord, /bin/systemctl stop supervisord
+${PANEL_APP_USER} ALL=(root) NOPASSWD: /usr/bin/systemctl start nginx, /usr/bin/systemctl restart nginx, /usr/bin/systemctl stop nginx, /usr/bin/systemctl start caddy, /usr/bin/systemctl restart caddy, /usr/bin/systemctl stop caddy, /usr/bin/systemctl start php-fpm, /usr/bin/systemctl restart php-fpm, /usr/bin/systemctl stop php-fpm, /usr/bin/systemctl start firewalld, /usr/bin/systemctl restart firewalld, /usr/bin/systemctl stop firewalld, /usr/bin/systemctl start supervisord, /usr/bin/systemctl restart supervisord, /usr/bin/systemctl stop supervisord, /bin/systemctl start nginx, /bin/systemctl restart nginx, /bin/systemctl stop nginx, /bin/systemctl start caddy, /bin/systemctl restart caddy, /bin/systemctl stop caddy, /bin/systemctl start php-fpm, /bin/systemctl restart php-fpm, /bin/systemctl stop php-fpm, /bin/systemctl start firewalld, /bin/systemctl restart firewalld, /bin/systemctl stop firewalld, /bin/systemctl start supervisord, /bin/systemctl restart supervisord, /bin/systemctl stop supervisord
+EOF
+
+    chmod 440 "${sudoers_file}"
+    visudo -cf "${sudoers_file}" >/dev/null
+}
+
 install_larapanel_cli() {
     local target="/usr/local/bin/larapanel"
 
@@ -345,6 +359,7 @@ if [[ "${PANEL_APP_GROUP_IS_DEFAULT}" == "1" ]]; then
 fi
 
 ensure_group_exists "${PANEL_APP_GROUP}"
+configure_service_control_sudoers
 
 if [[ "${PANEL_WEB_SERVER}" == "caddy" ]]; then
     log "Installing Caddy..."

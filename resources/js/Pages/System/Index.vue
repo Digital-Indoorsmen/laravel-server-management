@@ -1,6 +1,6 @@
 <script setup>
 import { computed } from "vue";
-import { Head } from "@inertiajs/vue3";
+import { Head, useForm, usePage } from "@inertiajs/vue3";
 import AppLayout from "@/Layouts/AppLayout.vue";
 import ServiceItem from "@/Components/UI/ServiceItem.vue";
 import {
@@ -33,7 +33,14 @@ const props = defineProps({
         type: String,
         default: "unknown",
     },
+    canManageServices: {
+        type: Boolean,
+        default: false,
+    },
 });
+
+const page = usePage();
+const controlForm = useForm({});
 
 const systemStatsWithMeta = computed(() => {
     return props.systemStats.map((stat) => {
@@ -72,6 +79,19 @@ const firewallServices = computed(() => {
         ? props.security.firewall_services.join(", ")
         : "none";
 });
+
+const servicesWithKeys = computed(() => {
+    return props.services.map((service) => ({
+        ...service,
+        serviceKey: service.key ?? service.name.toLowerCase().replace(/\s+/g, "-"),
+    }));
+});
+
+const runServiceAction = (serviceKey, action) => {
+    controlForm.post(route("system.services.control", { service: serviceKey, action }), {
+        preserveScroll: true,
+    });
+};
 </script>
 
 <template>
@@ -79,6 +99,14 @@ const firewallServices = computed(() => {
 
     <AppLayout>
         <div class="space-y-6">
+            <div v-if="page.props.flash?.success" class="alert alert-success">
+                <span>{{ page.props.flash.success }}</span>
+            </div>
+
+            <div v-if="page.props.errors?.service_control" class="alert alert-error">
+                <span>{{ page.props.errors.service_control }}</span>
+            </div>
+
             <div class="flex items-end justify-between gap-4">
                 <div>
                     <h1 class="text-2xl font-bold tracking-tight text-base-content flex items-center gap-2">
@@ -115,14 +143,22 @@ const firewallServices = computed(() => {
 
             <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
                 <div class="lg:col-span-2 space-y-4">
-                    <h2 class="text-lg font-bold flex items-center gap-2">
+                    <div class="flex items-center justify-between gap-2">
+                        <h2 class="text-lg font-bold flex items-center gap-2">
                         <ViewColumnsIcon class="h-5 w-5 text-primary" />
                         Services
-                    </h2>
+                        </h2>
+                        <span v-if="!canManageServices" class="text-xs opacity-60">
+                            Read-only: service controls require sudo access.
+                        </span>
+                    </div>
                     <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
                         <ServiceItem
-                            v-for="service in services"
+                            v-for="service in servicesWithKeys"
                             :key="service.name"
+                            :service-key="service.serviceKey"
+                            :controls-enabled="canManageServices"
+                            @control="(action) => runServiceAction(service.serviceKey, action)"
                             v-bind="service"
                         />
                     </div>

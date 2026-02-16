@@ -34,16 +34,16 @@ class PanelHealthService
     }
 
     /**
-     * @return array<int, array{name: string, status: string, version: string}>
+     * @return array<int, array{key: string, name: string, status: string, version: string}>
      */
     public function services(): array
     {
         return [
-            $this->serviceStatus('Nginx Web Server', 'nginx', 'nginx -v'),
-            $this->serviceStatus('Caddy Web Server', 'caddy', 'caddy version'),
-            $this->serviceStatus('PHP-FPM', 'php-fpm', 'php-fpm -v | head -n 1'),
-            $this->serviceStatus('Firewalld', 'firewalld', 'firewall-cmd --version'),
-            $this->serviceStatus('Supervisor', 'supervisord', 'supervisord --version'),
+            $this->serviceStatus('nginx', 'Nginx Web Server', 'nginx', 'nginx -v'),
+            $this->serviceStatus('caddy', 'Caddy Web Server', 'caddy', 'caddy version'),
+            $this->serviceStatus('php-fpm', 'PHP-FPM', 'php-fpm', 'php-fpm -v | head -n 1'),
+            $this->serviceStatus('firewalld', 'Firewalld', 'firewalld', 'firewall-cmd --version'),
+            $this->serviceStatus('supervisord', 'Supervisor', 'supervisord', 'supervisord --version'),
         ];
     }
 
@@ -161,9 +161,9 @@ class PanelHealthService
     }
 
     /**
-     * @return array{name: string, status: string, version: string}
+     * @return array{key: string, name: string, status: string, version: string}
      */
-    private function serviceStatus(string $name, string $systemdUnit, string $versionCommand): array
+    private function serviceStatus(string $key, string $name, string $systemdUnit, string $versionCommand): array
     {
         $activeState = $this->runCommand("systemctl is-active {$systemdUnit}");
         $status = match ($activeState) {
@@ -191,6 +191,7 @@ class PanelHealthService
         $version = preg_replace('/\s+/', ' ', trim($version)) ?: 'Not installed';
 
         return [
+            'key' => $key,
             'name' => $name,
             'status' => $status,
             'version' => $version,

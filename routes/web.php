@@ -18,6 +18,7 @@ Route::middleware('auth')->group(function (): void {
 
     Route::get('/dashboard', App\Http\Controllers\DashboardController::class)->name('dashboard');
     Route::get('/system', App\Http\Controllers\SystemController::class)->name('system.index');
+    Route::post('/system/services/{service}/{action}', App\Http\Controllers\SystemServiceController::class)->name('system.services.control');
     Route::get('/sites', App\Http\Controllers\SiteCatalogController::class)->name('sites.catalog');
     Route::get('/databases', App\Http\Controllers\DatabaseController::class)->name('databases.index');
     Route::get('/profile', App\Http\Controllers\ProfileController::class)->name('profile.show');

@@ -26,6 +26,7 @@ it('includes a one-line AlmaLinux and Rocky installer script with critical setup
     expect($script)->toContain('artisan package:discover --ansi');
     expect($script)->toContain('repair_sqlite_runtime_access');
     expect($script)->toContain('install_larapanel_cli');
+    expect($script)->toContain('configure_service_control_sudoers');
     expect($script)->toContain('install_js_dependencies_with_retries');
     expect($script)->toContain('build_js_assets_with_retry');
     expect($script)->toContain('disable_conflicting_web_server');
@@ -49,4 +50,6 @@ it('includes a one-line AlmaLinux and Rocky installer script with critical setup
     expect($script)->toContain('laravel-queue.service');
     expect($script)->toContain('/usr/local/bin/larapanel');
     expect($script)->toContain('artisan panel:cli "\$@"');
+    expect($script)->toContain('/etc/sudoers.d/laravel-panel-service-control');
+    expect($script)->toContain('visudo -cf');
 });
