@@ -4,7 +4,9 @@ Laravel + Inertia control panel for provisioning and managing self-hosted Linux 
 
 Repository: <https://github.com/Digital-Indoorsmen/laravel-server-management>
 
-This README is a production-oriented, start-to-finish install guide for a fresh Rocky Linux 9 server where you can SSH as `root`.
+This README is a production-oriented, start-to-finish install guide for a fresh AlmaLinux or Rocky Linux 8, 9, or 10 server where you can SSH as `root`.
+
+If you want the fastest path, use the one-line installer in [One-Line Bootstrap Installer](#one-line-bootstrap-installer), then use the manual sections as reference.
 
 ## What You Are Installing
 
@@ -22,10 +24,42 @@ This README is a production-oriented, start-to-finish install guide for a fresh 
 
 ## Assumptions
 
-- Fresh Rocky Linux 9 minimal install
+- Fresh AlmaLinux or Rocky Linux 8/9/10 minimal install
 - You can SSH as `root`
 - You have a domain (example: `panel.example.com`) pointing to this server's public IP
 - Server has outbound internet access
+
+## One-Line Bootstrap Installer
+
+This repository now includes `resources/scripts/install-panel.sh`, which performs core AlmaLinux/Rocky Linux 8/9/10 prep and app install automatically.
+
+Required on target server:
+
+- `curl` or `wget`
+- root SSH access
+
+Recommended one-liner (`curl`):
+
+```bash
+PANEL_DOMAIN=panel.example.com PANEL_EMAIL=you@example.com bash -c "$(curl -fsSL https://raw.githubusercontent.com/Digital-Indoorsmen/laravel-server-management/main/resources/scripts/install-panel.sh)"
+```
+
+Equivalent (`wget`):
+
+```bash
+PANEL_DOMAIN=panel.example.com PANEL_EMAIL=you@example.com bash -c "$(wget -qO- https://raw.githubusercontent.com/Digital-Indoorsmen/laravel-server-management/main/resources/scripts/install-panel.sh)"
+```
+
+Important installer environment variables:
+
+- `PANEL_DOMAIN`: public domain for the panel (optional, but recommended)
+- `PANEL_EMAIL`: email used by certbot for HTTPS (required for automatic SSL)
+- `PANEL_USE_SSL`: `1` (default) or `0`
+- `PANEL_INSTALL_CERTBOT`: `1` (default) or `0`
+- `PANEL_APP_DIR`: app path (default `/var/www/laravel-server-management`)
+- `PANEL_BRANCH`: git branch to install (default `main`)
+
+After bootstrap completes, continue with [First Use Workflow (Inside the Panel)](#15-first-use-workflow-inside-the-panel).
 
 ## 1. Initial OS Prep (as root)
 
@@ -47,7 +81,7 @@ reboot
 Enable Remi and install PHP 8.4:
 
 ```bash
-dnf -y install https://rpms.remirepo.net/enterprise/remi-release-9.rpm
+dnf -y install https://rpms.remirepo.net/enterprise/remi-release-$(rpm -E %rhel).rpm
 dnf -y module reset php
 dnf -y module enable php:remi-8.4
 dnf -y install php php-cli php-fpm php-common php-mbstring php-xml php-gd php-intl php-zip php-bcmath php-curl php-pdo php-sqlite3 php-mysqlnd php-pgsql php-opcache php-process

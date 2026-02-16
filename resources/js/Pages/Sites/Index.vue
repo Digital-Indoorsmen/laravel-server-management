@@ -41,6 +41,7 @@ defineProps({
                                 <th>Domain</th>
                                 <th>User</th>
                                 <th>App Type</th>
+                                <th>Web Server</th>
                                 <th>PHP</th>
                                 <th>Status</th>
                                 <th>Actions</th>
@@ -54,6 +55,7 @@ defineProps({
                                 </td>
                                 <td>{{ site.system_user }}</td>
                                 <td class="capitalize">{{ site.app_type }}</td>
+                                <td class="uppercase">{{ site.web_server || server.web_server || 'nginx' }}</td>
                                 <td>{{ site.php_version }}</td>
                                 <td>
                                     <span class="badge badge-sm" :class="{
@@ -71,7 +73,7 @@ defineProps({
                                 </td>
                             </tr>
                             <tr v-if="sites.length === 0">
-                                <td colspan="6" class="text-center py-8 text-base-content/50">
+                                <td colspan="7" class="text-center py-8 text-base-content/50">
                                     No sites found. Create one to get started.
                                 </td>
                             </tr>

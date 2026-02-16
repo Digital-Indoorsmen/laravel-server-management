@@ -6,9 +6,9 @@ use App\Models\Server;
 use App\Models\Site;
 use App\Services\SiteProvisioningService;
 use Illuminate\Http\Request;
-use Inertia\Inertia;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
+use Inertia\Inertia;
 
 class SiteController extends Controller
 {
@@ -47,6 +47,7 @@ class SiteController extends Controller
             'system_user' => ['required', 'string', 'max:32', 'alpha_dash', 'unique:sites,system_user'],
             'php_version' => ['required', 'string', 'in:7.4,8.1,8.2,8.3,8.4,8.5'],
             'app_type' => ['required', 'string', 'in:wordpress,laravel,generic'],
+            'web_server' => ['nullable', 'string', 'in:nginx,caddy'],
             'create_database' => ['boolean'],
             'database_type' => ['required_if:create_database,true', 'string', 'in:mariadb,postgresql'],
         ]);
@@ -65,6 +66,7 @@ class SiteController extends Controller
                 'system_user' => $validated['system_user'],
                 'php_version' => $validated['php_version'],
                 'app_type' => $validated['app_type'],
+                'web_server' => $validated['web_server'] ?? null,
                 'document_root' => $documentRoot,
                 'status' => 'creating',
             ]);
@@ -73,10 +75,10 @@ class SiteController extends Controller
                 // Generate secure DB name and credentials
                 // Name: db_{slugged_domain_without_dashes}
                 $cleanName = str_replace(['.', '-'], '_', $validated['domain']);
-                $dbName = 'db_' . substr($cleanName, 0, 50); // Ensure length is reasonable
-                
-                // User: same as system user but prefixed or just same? 
-                // Requirement: "Create a dedicated database user". 
+                $dbName = 'db_'.substr($cleanName, 0, 50); // Ensure length is reasonable
+
+                // User: same as system user but prefixed or just same?
+                // Requirement: "Create a dedicated database user".
                 // Let's use system_user as the base, it's unique per server usually.
                 // But mysql users have 32 char limit (MariaDB < 10.x used to be 16, but we are on modern).
                 $dbUser = $validated['system_user'];
@@ -101,7 +103,8 @@ class SiteController extends Controller
 
         } catch (\Exception $e) {
             DB::rollBack();
-            return back()->withErrors(['error' => 'Failed to create site: ' . $e->getMessage()]);
+
+            return back()->withErrors(['error' => 'Failed to create site: '.$e->getMessage()]);
         }
     }
 
@@ -134,38 +137,37 @@ class SiteController extends Controller
     /**
      * Remove the specified resource from storage.
      */
-        public function destroy(Site $site)
-        {
-            // TODO: Implement deprovisioning logic
-            $site->delete();
-    
-            return redirect()->route('servers.sites.index', $site->server)
-                ->with('success', 'Site deleted.');
-        }
-    
-        public function env(Site $site)
-        {
-            $content = $this->provisioner->getEnvContent($site);
-    
-            return Inertia::render('Sites/Env', [
-                'site' => $site->load('server'),
-                'content' => $content,
-            ]);
-        }
-    
-        public function updateEnv(Request $request, Site $site)
-        {
-            $validated = $request->validate([
-                'content' => ['required', 'string'],
-            ]);
-    
-            try {
-                $this->provisioner->updateEnvContent($site, $validated['content']);
-    
-                return back()->with('success', 'Environment updated successfully.');
-            } catch (\Exception $e) {
-                return back()->withErrors(['error' => 'Failed to update environment: ' . $e->getMessage()]);
-            }
+    public function destroy(Site $site)
+    {
+        // TODO: Implement deprovisioning logic
+        $site->delete();
+
+        return redirect()->route('servers.sites.index', $site->server)
+            ->with('success', 'Site deleted.');
+    }
+
+    public function env(Site $site)
+    {
+        $content = $this->provisioner->getEnvContent($site);
+
+        return Inertia::render('Sites/Env', [
+            'site' => $site->load('server'),
+            'content' => $content,
+        ]);
+    }
+
+    public function updateEnv(Request $request, Site $site)
+    {
+        $validated = $request->validate([
+            'content' => ['required', 'string'],
+        ]);
+
+        try {
+            $this->provisioner->updateEnvContent($site, $validated['content']);
+
+            return back()->with('success', 'Environment updated successfully.');
+        } catch (\Exception $e) {
+            return back()->withErrors(['error' => 'Failed to update environment: '.$e->getMessage()]);
         }
     }
-    
+}

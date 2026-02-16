@@ -28,8 +28,8 @@ class SiteProvisioningService
             // 3. Configure PHP-FPM
             $this->configurePhpFpm($site);
 
-            // 4. Configure Nginx
-            $this->configureNginx($site);
+            // 4. Configure web server
+            $this->configureWebServer($site);
 
             // 5. Provision Databases
             if ($site->databases()->exists()) {
@@ -45,7 +45,7 @@ class SiteProvisioningService
             $site->update(['status' => 'active']);
 
         } catch (\Exception $e) {
-            Log::error("Failed to provision site {$site->domain}: " . $e->getMessage());
+            Log::error("Failed to provision site {$site->domain}: ".$e->getMessage());
             $site->update(['status' => 'error']);
             throw $e;
         }
@@ -55,13 +55,13 @@ class SiteProvisioningService
     {
         $cmd = "id -u {$site->system_user} &>/dev/null || sudo useradd -m -s /bin/bash {$site->system_user}";
         $this->connection->runCommand($site->server, $cmd);
-        
+
         // Ensure home dir permissions
         $this->connection->runCommand($site->server, "sudo chmod 711 /home/{$site->system_user}");
 
         // SELinux User Mapping (MCS Isolation)
         if ($site->mcs_id) {
-            $category = "s0:c" . $site->mcs_id;
+            $category = 's0:c'.$site->mcs_id;
             // Apply MCS category to the user
             $semanageCmd = "sudo semanage login -a -s user_u -r {$category} {$site->system_user} || sudo semanage login -m -s user_u -r {$category} {$site->system_user}";
             $this->connection->runCommand($site->server, "if command -v semanage &> /dev/null; then {$semanageCmd}; fi");
@@ -95,10 +95,36 @@ class SiteProvisioningService
         $this->writeRemoteFile($site->server, $path, $config);
     }
 
+    protected function configureCaddy(Site $site): void
+    {
+        $config = view('provisioning.caddy', ['site' => $site])->render();
+        $this->connection->runCommand($site->server, 'sudo mkdir -p /etc/caddy/sites-enabled');
+
+        $path = "/etc/caddy/sites-enabled/{$site->domain}.caddy";
+        $this->writeRemoteFile($site->server, $path, $config);
+    }
+
+    protected function configureWebServer(Site $site): void
+    {
+        if ($this->getWebServer($site) === 'caddy') {
+            $this->configureCaddy($site);
+
+            return;
+        }
+
+        $this->configureNginx($site);
+    }
+
     protected function reloadServices(Site $site): void
     {
         $phpService = $this->getPhpServiceName($site);
-        $this->connection->runCommand($site->server, "sudo systemctl reload nginx");
+        if ($this->getWebServer($site) === 'caddy') {
+            $this->validateCaddyConfig($site);
+            $this->connection->runCommand($site->server, 'sudo systemctl reload caddy');
+        } else {
+            $this->connection->runCommand($site->server, 'sudo systemctl reload nginx');
+        }
+
         $this->connection->runCommand($site->server, "sudo systemctl reload {$phpService}");
     }
 
@@ -113,19 +139,40 @@ class SiteProvisioningService
     protected function getPhpPoolPath(Site $site): string
     {
         $version = str_replace('.', '', $site->php_version); // 8.3 -> 83
+
         return "/etc/opt/remi/php{$version}/php-fpm.d/{$site->system_user}.conf";
     }
 
     protected function getPhpServiceName(Site $site): string
     {
         $version = str_replace('.', '', $site->php_version); // 8.3 -> 83
+
         return "php{$version}-php-fpm";
+    }
+
+    protected function getWebServer(Site $site): string
+    {
+        return $site->web_server ?? $site->server->web_server ?? 'nginx';
+    }
+
+    protected function validateCaddyConfig(Site $site): void
+    {
+        $output = $this->connection->runCommand(
+            $site->server,
+            "if sudo caddy validate --config /etc/caddy/Caddyfile >/tmp/panel-caddy-validate.log 2>&1; then echo '__PANEL_CADDY_VALID__'; else cat /tmp/panel-caddy-validate.log; echo '__PANEL_CADDY_INVALID__'; fi"
+        );
+
+        if (str_contains($output, '__PANEL_CADDY_INVALID__')) {
+            $sanitizedOutput = str_replace(['__PANEL_CADDY_INVALID__', '__PANEL_CADDY_VALID__'], '', $output);
+
+            throw new \RuntimeException('Caddy configuration validation failed: '.trim($sanitizedOutput));
+        }
     }
 
     protected function configureEnvWithDatabase(Site $site): void
     {
         $database = $site->databases()->first();
-        if (!$database) {
+        if (! $database) {
             return;
         }
 
@@ -147,7 +194,7 @@ DB_USERNAME={$database->username}
 DB_PASSWORD={$password}
 
 EOT;
-        
+
         $exists = false;
         try {
             $this->connection->runCommand($site->server, "sudo test -f /home/{$site->system_user}/.env");
@@ -156,7 +203,7 @@ EOT;
             $exists = false;
         }
 
-        if (!$exists) {
+        if (! $exists) {
             $this->updateEnvContent($site, $envContent);
         }
     }
@@ -174,7 +221,7 @@ EOT;
     {
         $path = "/home/{$site->system_user}/.env";
         $this->writeRemoteFile($site->server, $path, $content);
-        
+
         // Ensure permissions
         $this->connection->runCommand($site->server, "sudo chown {$site->system_user}:{$site->system_user} {$path}");
         $this->connection->runCommand($site->server, "sudo chmod 600 {$path}");

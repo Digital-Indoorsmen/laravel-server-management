@@ -60,6 +60,10 @@ defineProps({
                                 <span class="block text-xs font-bold uppercase opacity-50">App Type</span>
                                 <span class="capitalize">{{ site.app_type }}</span>
                             </div>
+                            <div>
+                                <span class="block text-xs font-bold uppercase opacity-50">Web Server</span>
+                                <span class="uppercase">{{ site.web_server || site.server.web_server || 'nginx' }}</span>
+                            </div>
                         </div>
                     </div>
                 </div>

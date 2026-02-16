@@ -98,6 +98,14 @@ const testConnection = (id) => {
         preserveScroll: true,
     });
 };
+
+const updateWebServer = (id, webServer) => {
+    useForm({
+        web_server: webServer,
+    }).patch(route("servers.web-server.update", { server: id }), {
+        preserveScroll: true,
+    });
+};
 </script>
 
 <template>
@@ -170,6 +178,9 @@ const testConnection = (id) => {
                                 <span class="badge badge-sm badge-outline">{{
                                     server.os_version || "Detecting..."
                                 }}</span>
+                                <span class="badge badge-sm badge-outline uppercase">
+                                    {{ server.web_server || "nginx" }}
+                                </span>
                                 <span
                                     v-if="server.ssh_key"
                                     class="badge badge-sm badge-success badge-outline gap-1"
@@ -188,20 +199,36 @@ const testConnection = (id) => {
 
                             <div class="divider my-0"></div>
 
-                            <div class="flex justify-end gap-2">
-                                <button
-                                    class="btn btn-xs btn-outline btn-primary"
-                                    @click="testConnection(server.id)"
-                                    :disabled="!server.ssh_key"
-                                >
-                                    Test Connection
-                                </button>
-                                <Link
-                                    class="btn btn-xs btn-outline"
-                                    :href="route('servers.sites.index', server.id)"
-                                >
-                                    Manage
-                                </Link>
+                            <div class="flex flex-col gap-2">
+                                <div class="form-control">
+                                    <label class="label py-0">
+                                        <span class="label-text text-xs">Web Server</span>
+                                    </label>
+                                    <select
+                                        class="select select-xs select-bordered"
+                                        :value="server.web_server || 'nginx'"
+                                        @change="(event) => updateWebServer(server.id, event.target.value)"
+                                    >
+                                        <option value="nginx">Nginx</option>
+                                        <option value="caddy">Caddy</option>
+                                    </select>
+                                </div>
+
+                                <div class="flex justify-end gap-2">
+                                    <button
+                                        class="btn btn-xs btn-outline btn-primary"
+                                        @click="testConnection(server.id)"
+                                        :disabled="!server.ssh_key"
+                                    >
+                                        Test Connection
+                                    </button>
+                                    <Link
+                                        class="btn btn-xs btn-outline"
+                                        :href="route('servers.sites.index', server.id)"
+                                    >
+                                        Manage
+                                    </Link>
+                                </div>
                             </div>
                         </div>
                     </div>

@@ -2,6 +2,8 @@
 
 namespace App\Providers;
 
+use Chewie\Art;
+use Chewie\Renderer;
 use Illuminate\Support\ServiceProvider;
 
 class AppServiceProvider extends ServiceProvider
@@ -19,6 +21,9 @@ class AppServiceProvider extends ServiceProvider
      */
     public function boot(): void
     {
+        Renderer::setNamespace('App\\Prompts\\Renderers');
+        Art::setDirectory(resource_path('art'));
+
         if (config('database.default') === 'sqlite') {
             $db = \Illuminate\Support\Facades\DB::connection()->getPdo();
             $pragmas = config('database.connections.sqlite.pragmas', []);

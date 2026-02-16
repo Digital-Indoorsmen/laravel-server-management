@@ -4,14 +4,14 @@ use App\Models\Server;
 use App\Models\Site;
 use App\Services\ServerConnectionService;
 use App\Services\SiteProvisioningService;
-use Mockery\MockInterface;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Mockery\MockInterface;
 
 uses(RefreshDatabase::class);
 
 test('site can be provisioned', function () {
     $server = Server::factory()->create();
-    
+
     // Mock the connection service
     $this->mock(ServerConnectionService::class, function (MockInterface $mock) {
         // Allow any command and return a success output
@@ -19,7 +19,7 @@ test('site can be provisioned', function () {
     });
 
     $service = app(SiteProvisioningService::class);
-    
+
     $site = Site::create([
         'server_id' => $server->id,
         'domain' => 'example.com',
@@ -36,14 +36,67 @@ test('site can be provisioned', function () {
     expect($site->status)->toBe('active');
 });
 
-use App\Models\User;
+test('site can be provisioned with caddy', function () {
+    $server = Server::factory()->create([
+        'web_server' => 'caddy',
+    ]);
 
+    $this->mock(ServerConnectionService::class, function (MockInterface $mock) {
+        $mock->shouldReceive('runCommand')->byDefault()->andReturn('');
+
+        $mock->shouldReceive('runCommand')
+            ->withArgs(function ($server, $command) {
+                return str_contains($command, 'mkdir -p /etc/caddy/sites-enabled');
+            })
+            ->once()
+            ->andReturn('');
+
+        $mock->shouldReceive('runCommand')
+            ->withArgs(function ($server, $command) {
+                return str_contains($command, '/etc/caddy/sites-enabled/caddy-example.com.caddy');
+            })
+            ->once()
+            ->andReturn('');
+
+        $mock->shouldReceive('runCommand')
+            ->withArgs(function ($server, $command) {
+                return str_contains($command, 'caddy validate --config /etc/caddy/Caddyfile');
+            })
+            ->once()
+            ->andReturn('__PANEL_CADDY_VALID__');
+
+        $mock->shouldReceive('runCommand')
+            ->withArgs(function ($server, $command) {
+                return str_contains($command, 'systemctl reload caddy');
+            })
+            ->once()
+            ->andReturn('');
+    });
+
+    $service = app(SiteProvisioningService::class);
+
+    $site = Site::create([
+        'server_id' => $server->id,
+        'domain' => 'caddy-example.com',
+        'system_user' => 'caddyexample',
+        'php_version' => '8.3',
+        'app_type' => 'laravel',
+        'document_root' => '/home/caddyexample/public_html/public',
+        'status' => 'creating',
+    ]);
+
+    $service->provision($site);
+
+    expect($site->fresh()->status)->toBe('active');
+});
+
+use App\Models\User;
 use Illuminate\Foundation\Http\Middleware\ValidateCsrfToken;
 
 test('site creation via controller triggers provisioning', function () {
     $server = Server::factory()->create();
     $user = User::factory()->create();
-    
+
     $this->mock(SiteProvisioningService::class, function (MockInterface $mock) {
         $mock->shouldReceive('provision')->once();
     });
@@ -51,18 +104,46 @@ test('site creation via controller triggers provisioning', function () {
     $response = $this->withoutMiddleware([ValidateCsrfToken::class])
         ->actingAs($user)
         ->post(route('servers.sites.store', $server), [
-        'domain' => 'newsite.com',
-        'system_user' => 'newsite',
-        'php_version' => '8.2',
-        'app_type' => 'wordpress',
-    ]);
+            'domain' => 'newsite.com',
+            'system_user' => 'newsite',
+            'php_version' => '8.2',
+            'app_type' => 'wordpress',
+        ]);
 
     $response->assertRedirect(route('servers.sites.index', $server));
-    
+
     $this->assertDatabaseHas('sites', [
         'domain' => 'newsite.com',
         'system_user' => 'newsite',
         'php_version' => '8.2',
-        'status' => 'creating', 
+        'status' => 'creating',
+    ]);
+});
+
+test('site creation can override web server to caddy', function () {
+    $server = Server::factory()->create([
+        'web_server' => 'nginx',
+    ]);
+    $user = User::factory()->create();
+
+    $this->mock(SiteProvisioningService::class, function (MockInterface $mock) {
+        $mock->shouldReceive('provision')->once();
+    });
+
+    $response = $this->withoutMiddleware([ValidateCsrfToken::class])
+        ->actingAs($user)
+        ->post(route('servers.sites.store', $server), [
+            'domain' => 'override-caddy.com',
+            'system_user' => 'overridecaddy',
+            'php_version' => '8.3',
+            'app_type' => 'generic',
+            'web_server' => 'caddy',
+        ]);
+
+    $response->assertRedirect(route('servers.sites.index', $server));
+
+    $this->assertDatabaseHas('sites', [
+        'domain' => 'override-caddy.com',
+        'web_server' => 'caddy',
     ]);
 });

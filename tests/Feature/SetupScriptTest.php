@@ -9,6 +9,7 @@ it('renders the setup script with a valid token', function () {
     $server = Server::factory()->create([
         'name' => 'Test Server',
         'setup_token' => 'test-token-123',
+        'web_server' => 'nginx',
     ]);
 
     $response = $this->get(route('setup.script', ['token' => 'test-token-123']));
@@ -17,6 +18,21 @@ it('renders the setup script with a valid token', function () {
     $response->assertHeader('Content-Type', 'text/plain; charset=UTF-8');
     $response->assertSee('Starting core setup script for server '.$server->id);
     $response->assertSee('test-token-123/callback');
+    $response->assertSee('Installing Nginx');
+});
+
+it('renders caddy setup steps when server uses caddy', function () {
+    $server = Server::factory()->create([
+        'name' => 'Caddy Server',
+        'setup_token' => 'test-token-caddy',
+        'web_server' => 'caddy',
+    ]);
+
+    $response = $this->get(route('setup.script', ['token' => 'test-token-caddy']));
+
+    $response->assertStatus(200);
+    $response->assertSee('Installing Caddy');
+    $response->assertSee('Configuring Caddy for the management panel on port 8095');
 });
 
 it('returns 404 for an invalid token', function () {

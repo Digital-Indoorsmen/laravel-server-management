@@ -29,6 +29,8 @@ log "Notifying panel that setup has started..."
 curl -X POST -H "Content-Type: application/json" -d '{"status": "provisioning"}' "{{ $callbackUrl }}" || true
 
 log "Starting core setup script for server {{ $server->id }}..."
+WEB_SERVER="{{ $server->web_server ?? 'nginx' }}"
+log "Selected web server: ${WEB_SERVER}"
 
 # 1. OS Detection
 if [ -f /etc/os-release ]; then
@@ -237,7 +239,20 @@ else
     log "Redis is already installed."
 fi
 
-# 13. Web Server (Nginx)
+# 13. Web Server
+@if(($server->web_server ?? 'nginx') === 'caddy')
+log "Installing Caddy..."
+if ! is_installed "caddy"; then
+    log "Installing Caddy..."
+    dnf install -y 'dnf-command(copr)'
+    dnf copr enable -y @caddy/caddy || true
+    dnf install -y caddy
+else
+    log "Caddy is already installed."
+fi
+
+systemctl enable caddy --now
+@else
 log "Installing Nginx..."
 if ! is_installed "nginx"; then
     log "Installing Nginx..."
@@ -246,6 +261,7 @@ if ! is_installed "nginx"; then
 else
     log "Nginx is already installed."
 fi
+@endif
 
 # 14. Global Tooling (Bun)
 log "Installing Bun for 'panel' user..."
@@ -279,6 +295,33 @@ chmod 755 /var/log/panel
 chmod 700 /etc/ssl/panel
 
 # 16. Panel Site Configuration (Port 8095)
+@if(($server->web_server ?? 'nginx') === 'caddy')
+log "Configuring Caddy for the management panel on port 8095..."
+mkdir -p /etc/caddy/sites-enabled
+cat <<'EOF' > /etc/caddy/Caddyfile
+{
+    auto_https off
+}
+
+import /etc/caddy/sites-enabled/*.caddy
+
+:8095 {
+    root * /var/www/panel/public
+    encode gzip zstd
+    php_fastcgi unix//run/php-fpm/www.sock
+    file_server
+
+    header {
+        X-Frame-Options "SAMEORIGIN"
+        X-Content-Type-Options "nosniff"
+        X-XSS-Protection "1; mode=block"
+        Referrer-Policy "strict-origin-when-cross-origin"
+    }
+}
+EOF
+systemctl reload caddy
+log "Panel Caddy configuration updated."
+@else
 log "Configuring Nginx for the management panel on port 8095..."
 PANEL_CONF="/etc/nginx/conf.d/panel.conf"
 if [[ ! -f "$PANEL_CONF" ]]; then
@@ -321,10 +364,15 @@ EOF
 else
     log "Panel Nginx configuration already exists."
 fi
+@endif
 
 # 17. Service Health Checks
 log "Running service health checks..."
+@if(($server->web_server ?? 'nginx') === 'caddy')
+SERVICES=("caddy" "mariadb" "postgresql" "redis")
+@else
 SERVICES=("nginx" "mariadb" "postgresql" "redis")
+@endif
 for svc in "${SERVICES[@]}"; do
     if systemctl is-active --quiet "$svc"; then
         log "Service '$svc' is running."
@@ -394,6 +442,19 @@ else
     log "Error: Failed to install SELinux policy."
 fi
 cd - > /dev/null
+
+@if(($server->web_server ?? 'nginx') === 'caddy')
+log "Applying Caddy SELinux contexts and booleans..."
+mkdir -p /var/log/caddy /etc/caddy/sites-enabled
+semanage fcontext -a -t httpd_log_t "/var/log/caddy(/.*)?" 2>/dev/null || true
+semanage fcontext -a -t httpd_config_t "/etc/caddy/sites-enabled(/.*)?" 2>/dev/null || true
+semanage fcontext -a -t httpd_sys_rw_content_t "/run/php-fpm(/.*)?" 2>/dev/null || true
+restorecon -Rv /var/log/caddy /etc/caddy /run/php-fpm || true
+
+setsebool -P httpd_can_network_connect 1 || true
+setsebool -P httpd_can_network_connect_db 1 || true
+setsebool -P httpd_can_sendmail 1 || true
+@endif
 
 # 19. Firewalld Configuration
 log "Configuring Firewalld..."

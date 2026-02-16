@@ -22,6 +22,7 @@ class ServerFactory extends Factory
             'hostname' => $this->faker->unique()->domainName(),
             'os_version' => 'almalinux 9.4',
             'status' => 'pending',
+            'web_server' => 'nginx',
         ];
     }
 }

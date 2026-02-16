@@ -28,6 +28,7 @@ Route::delete('/ssh-keys/{sshKey}', [App\Http\Controllers\SshKeyController::clas
 
 Route::post('/servers/{server}/test', [App\Http\Controllers\ServerController::class, 'testConnection'])->name('servers.test');
 Route::get('/servers/{server}/logs', [App\Http\Controllers\ServerController::class, 'logs'])->name('servers.logs');
+Route::patch('/servers/{server}/web-server', [App\Http\Controllers\ServerController::class, 'updateWebServer'])->name('servers.web-server.update');
 
 Route::resource('servers.sites', App\Http\Controllers\SiteController::class)->shallow();
 Route::get('/sites/{site}/env', [App\Http\Controllers\SiteController::class, 'env'])->name('sites.env');
