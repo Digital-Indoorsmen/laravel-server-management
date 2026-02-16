@@ -81,6 +81,36 @@ run_as_panel() {
     runuser -u "${PANEL_APP_USER}" -- bash -lc "${command}"
 }
 
+install_js_dependencies_with_retries() {
+    local bun_shell='export BUN_INSTALL="$HOME/.bun"; export PATH="$BUN_INSTALL/bin:$PATH";'
+
+    if run_as_panel "${bun_shell} cd '${PANEL_APP_DIR}' && bun install --frozen-lockfile"; then
+        return 0
+    fi
+
+    log "bun install --frozen-lockfile failed; clearing Bun cache and retrying..."
+    run_as_panel "${bun_shell} rm -rf \"\$HOME/.bun/install/cache\" \"\$HOME/.cache/bun\""
+
+    if run_as_panel "${bun_shell} cd '${PANEL_APP_DIR}' && bun install"; then
+        return 0
+    fi
+
+    log "bun install retry failed; clearing Bun cache and trying one final time..."
+    run_as_panel "${bun_shell} rm -rf \"\$HOME/.bun/install/cache\" \"\$HOME/.cache/bun\""
+    run_as_panel "${bun_shell} cd '${PANEL_APP_DIR}' && bun install"
+}
+
+build_js_assets_with_retry() {
+    local bun_shell='export BUN_INSTALL="$HOME/.bun"; export PATH="$BUN_INSTALL/bin:$PATH";'
+
+    if run_as_panel "${bun_shell} cd '${PANEL_APP_DIR}' && bun run build"; then
+        return 0
+    fi
+
+    log "bun run build failed; retrying once..."
+    run_as_panel "${bun_shell} cd '${PANEL_APP_DIR}' && bun run build"
+}
+
 ensure_service_running() {
     local name="$1"
     systemctl enable --now "${name}"
@@ -221,8 +251,8 @@ ensure_service_running "${PANEL_WEB_SERVER}"
 usermod -aG "${PANEL_APP_GROUP}" "${PANEL_APP_USER}" || true
 
 log "Installing JS dependencies and building assets..."
-run_as_panel "export BUN_INSTALL=\"\$HOME/.bun\"; export PATH=\"\$BUN_INSTALL/bin:\$PATH\"; cd '${PANEL_APP_DIR}' && bun install --frozen-lockfile || bun install"
-run_as_panel "export BUN_INSTALL=\"\$HOME/.bun\"; export PATH=\"\$BUN_INSTALL/bin:\$PATH\"; cd '${PANEL_APP_DIR}' && bun run build"
+install_js_dependencies_with_retries
+build_js_assets_with_retry
 
 if [[ ! -f "${PANEL_APP_DIR}/.env" ]]; then
     cp "${PANEL_APP_DIR}/.env.example" "${PANEL_APP_DIR}/.env"

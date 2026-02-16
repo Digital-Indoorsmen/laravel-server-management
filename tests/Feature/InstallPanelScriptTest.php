@@ -21,7 +21,10 @@ it('includes a one-line AlmaLinux and Rocky installer script with critical setup
     expect($script)->toContain('APP_KEY already present; skipping key generation.');
     expect($script)->toContain('composer install --no-dev --optimize-autoloader --no-scripts');
     expect($script)->toContain('artisan package:discover --ansi');
-    expect($script)->toContain('bun run build');
+    expect($script)->toContain('install_js_dependencies_with_retries');
+    expect($script)->toContain('build_js_assets_with_retry');
+    expect($script)->toContain('bun install --frozen-lockfile failed; clearing Bun cache and retrying...');
+    expect($script)->toContain('bun run build failed; retrying once...');
     expect($script)->toContain('artisan migrate --force');
     expect($script)->toContain('laravel-queue.service');
 });
