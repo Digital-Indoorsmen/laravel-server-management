@@ -61,7 +61,8 @@ class PanelHealthService
         $changed = false;
 
         foreach ($services as $svc) {
-            if ($svc['status'] === 'running') {
+            // Store software if it's running OR if we detected a version (installed but not running as service)
+            if ($svc['status'] === 'running' || ($svc['status'] === 'stopped' && $svc['version'] !== 'Unknown' && $svc['version'] !== 'Not installed')) {
                 $type = $svc['key'];
 
                 // Special handling for php-fpm to generic php key
@@ -151,7 +152,7 @@ class PanelHealthService
         $services = [
             $this->serviceStatus('nginx', 'Nginx Web Server', 'nginx', 'nginx -v 2>&1 | head -n 1'),
             $this->serviceStatus('caddy', 'Caddy Web Server', 'caddy', 'caddy version | head -n 1'),
-            $this->serviceStatus('php-fpm', 'PHP-FPM', 'php-fpm', 'php-fpm -v | head -n 1'),
+            $this->serviceStatus('php-fpm', 'PHP-FPM', 'php', 'php -v | head -n 1'),
         ];
 
         $foundMariaDb = false;
