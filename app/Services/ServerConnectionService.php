@@ -79,7 +79,30 @@ class ServerConnectionService
      */
     protected function isLocalServer(Server $server): bool
     {
-        return $server->ip_address === '127.0.0.1' || $server->ip_address === 'localhost';
+        $ip = $server->ip_address;
+
+        if ($ip === '127.0.0.1' || $ip === 'localhost' || $ip === '::1') {
+            return true;
+        }
+
+        // Check if the IP matches any local interface
+        // We cache this for the request to avoid repeated shell calls
+        static $localIps = null;
+        if ($localIps === null) {
+            $output = shell_exec('hostname -I 2>/dev/null') ?? '';
+            $localIps = array_filter(explode(' ', trim($output)));
+        }
+
+        if (in_array($ip, $localIps, true)) {
+            return true;
+        }
+
+        // Check if hostname matches
+        if ($server->hostname === gethostname()) {
+            return true;
+        }
+
+        return false;
     }
 
     /**
