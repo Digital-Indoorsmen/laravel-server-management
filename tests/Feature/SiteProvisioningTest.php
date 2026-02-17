@@ -120,9 +120,9 @@ test('site creation via controller triggers provisioning', function () {
     ]);
 });
 
-test('site creation can override web server to caddy', function () {
+test('site creation uses server web server (auto-detected)', function () {
     $server = Server::factory()->create([
-        'web_server' => 'nginx',
+        'web_server' => 'caddy',
     ]);
     $user = User::factory()->create();
 
@@ -133,17 +133,16 @@ test('site creation can override web server to caddy', function () {
     $response = $this->withoutMiddleware([ValidateCsrfToken::class])
         ->actingAs($user)
         ->post(route('servers.sites.store', $server), [
-            'domain' => 'override-caddy.com',
-            'system_user' => 'overridecaddy',
+            'domain' => 'auto-detect.com',
+            'system_user' => 'autodetect',
             'php_version' => '8.3',
             'app_type' => 'generic',
-            'web_server' => 'caddy',
         ]);
 
     $response->assertRedirect(route('servers.sites.index', $server));
 
     $this->assertDatabaseHas('sites', [
-        'domain' => 'override-caddy.com',
+        'domain' => 'auto-detect.com',
         'web_server' => 'caddy',
     ]);
 });

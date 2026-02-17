@@ -62,10 +62,24 @@ class ServerConnectionService
 
     /**
      * Run a command on a server with optional output callback for streaming.
+     *
+     * For local servers, we prefer SSH to localhost as the 'panel' user
+     * because the web server process (caddy) runs in an SELinux context
+     * that blocks sudo access entirely (PAM/audit denied).
+     * SSH gives us a proper login context with working sudo.
      */
     public function execute(Server $server, string $command, ?callable $callback = null): string
     {
+        if ($this->isLocalServer($server) && $server->sshKey && $server->sshKey->private_key) {
+            // Use SSH to localhost — this gives us a proper SELinux context
+            // that allows sudo, unlike the caddy web server process context.
+            $ssh = $this->getSshConnection($server);
+
+            return $ssh->exec($command, $callback);
+        }
+
         if ($this->isLocalServer($server)) {
+            // Fallback for local servers without SSH key (basic info commands only)
             return $this->runLocalCommandWithCallback($command, $callback);
         }
 

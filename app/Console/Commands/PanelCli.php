@@ -11,6 +11,7 @@ use App\Services\PanelHealthService;
 use App\Services\SiteDeploymentService;
 use App\Services\SiteProvisioningService;
 use App\Services\SoftwareProvisioningService;
+use App\Services\SshKeyService;
 use Illuminate\Console\Command;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
@@ -344,6 +345,9 @@ class PanelCli extends Command
 
         // Ensure site provisioning sudoers is configured (idempotent)
         $this->ensureSiteProvisioningSudoers();
+
+        // Ensure local server has an SSH key for provisioning via SSH to localhost
+        $this->ensureLocalServerSshKey();
 
         if ($this->option('dry-run')) {
             $this->components->info('Dry run enabled. No commands will be executed.');
@@ -716,5 +720,60 @@ EOF;
         } else {
             $this->components->info('Site provisioning sudoers configured.');
         }
+    }
+
+    protected function ensureLocalServerSshKey(): void
+    {
+        if (! $this->isRunningAsRoot()) {
+            $this->components->warn('Skipping SSH key setup (not running as root).');
+
+            return;
+        }
+
+        $server = Server::query()
+            ->where('ip_address', '127.0.0.1')
+            ->orWhere('ip_address', 'localhost')
+            ->first();
+
+        if (! $server) {
+            return;
+        }
+
+        // Already has an SSH key
+        if ($server->ssh_key_id && $server->sshKey && $server->sshKey->private_key) {
+            $this->components->info('Local server SSH key already configured.');
+
+            return;
+        }
+
+        $this->components->info('Generating SSH key for local server provisioning...');
+
+        $sshKeyService = app(SshKeyService::class);
+        $sshKey = $sshKeyService->generate('panel-local-provisioning');
+
+        // Add public key to panel user's authorized_keys
+        $panelHome = '/home/panel';
+        $sshDir = "{$panelHome}/.ssh";
+        $authorizedKeys = "{$sshDir}/authorized_keys";
+
+        if (! is_dir($sshDir)) {
+            mkdir($sshDir, 0700, true);
+            chown($sshDir, 'panel');
+            chgrp($sshDir, 'panel');
+        }
+
+        // Append if not already present
+        $existingKeys = file_exists($authorizedKeys) ? file_get_contents($authorizedKeys) : '';
+        if (! str_contains($existingKeys, $sshKey->public_key)) {
+            file_put_contents($authorizedKeys, $sshKey->public_key."\n", FILE_APPEND);
+            chmod($authorizedKeys, 0600);
+            chown($authorizedKeys, 'panel');
+            chgrp($authorizedKeys, 'panel');
+        }
+
+        // Associate the key with the local server
+        $server->update(['ssh_key_id' => $sshKey->id]);
+
+        $this->components->info('Local server SSH key configured for provisioning.');
     }
 }
