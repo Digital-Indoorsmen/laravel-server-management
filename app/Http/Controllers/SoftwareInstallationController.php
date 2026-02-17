@@ -5,13 +5,17 @@ namespace App\Http\Controllers;
 use App\Jobs\InstallSoftware;
 use App\Models\Server;
 use App\Models\SoftwareInstallation;
+use App\Services\PanelHealthService;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
 
 class SoftwareInstallationController extends Controller
 {
-    public function index(Server $server)
+    public function index(Server $server, PanelHealthService $panelHealth)
     {
+        $panelHealth->systemStats();
+        $server->refresh();
+
         $installedSoftware = $server->software ?? [];
 
         $availableSoftware = [
@@ -44,7 +48,16 @@ class SoftwareInstallationController extends Controller
         // Determine if upgrades are available for installed software
         foreach ($availableSoftware as &$item) {
             $id = $item['id'];
-            $item['installed_versions'] = isset($installedSoftware[$id]) ? array_keys($installedSoftware[$id]) : [];
+            $item['installed_versions'] = [];
+
+            // Check specific versions
+            if (isset($installedSoftware[$id])) {
+                foreach ($installedSoftware[$id] as $version => $details) {
+                    if (isset($details['status']) && $details['status'] === 'active') {
+                        $item['installed_versions'][] = $version;
+                    }
+                }
+            }
 
             // For PHP we can have multiple versions
             // For DB engines we usually have one
