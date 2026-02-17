@@ -7,13 +7,14 @@ import {
     GlobeAltIcon,
     CircleStackIcon,
     KeyIcon,
+    CommandLineIcon,
 } from "@heroicons/vue/24/outline";
 
 const page = usePage();
 
 const currentUrl = computed(() => page.url);
 
-const navigation = [
+const navigation = computed(() => [
     {
         name: "Dashboard",
         href: route("dashboard"),
@@ -53,7 +54,7 @@ const navigation = [
         icon: KeyIcon,
         startsWith: "/ssh-keys",
     },
-];
+]);
 
 const isActive = (startsWith) => {
     return (
