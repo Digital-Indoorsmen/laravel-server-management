@@ -274,6 +274,8 @@ class PanelCli extends Command
             ['bun', 'run', 'build'],
             ['php', 'artisan', 'migrate', '--force'],
             ['php', 'artisan', 'config:cache'],
+            ['php', 'artisan', 'view:cache'],
+            ['php', 'artisan', 'queue:restart'],
         ];
 
         if ($this->option('dry-run')) {
