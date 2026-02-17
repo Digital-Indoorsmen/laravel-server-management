@@ -34,8 +34,8 @@ const handleControl = (action) => {
     <div
         class="flex items-center justify-between p-3 rounded-xl border border-base-300 bg-base-100 hover:border-primary/30 transition-all group"
     >
-        <div class="flex items-center gap-3">
-            <div class="p-2 rounded-lg bg-base-200">
+        <div class="flex items-center gap-3 flex-1 min-w-0">
+            <div class="p-2 rounded-lg bg-base-200 flex-shrink-0">
                 <CheckCircleIcon
                     v-if="status === 'running'"
                     class="h-5 w-5 text-success"
@@ -54,9 +54,9 @@ const handleControl = (action) => {
                 />
             </div>
             <div class="flex-1 min-w-0">
-                <div class="font-bold text-sm">{{ name }}</div>
+                <div class="font-bold text-sm truncate">{{ name }}</div>
                 <div
-                    class="text-[10px] opacity-50 uppercase tracking-wider font-semibold truncate max-w-xs"
+                    class="text-[10px] opacity-50 uppercase tracking-wider font-semibold truncate"
                     :title="version || 'Installed'"
                 >
                     {{ version || "Installed" }}
@@ -64,7 +64,7 @@ const handleControl = (action) => {
             </div>
         </div>
 
-        <div class="flex items-center gap-2">
+        <div class="flex items-center gap-2 flex-shrink-0">
             <span
                 class="badge badge-sm font-bold"
                 :class="{
