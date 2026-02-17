@@ -5,6 +5,8 @@ use Illuminate\Support\Facades\Route;
 Route::get('/setup/{token}', [App\Http\Controllers\SetupScriptController::class, 'show'])->name('setup.script');
 Route::post('/setup/{token}/callback', [App\Http\Controllers\SetupScriptController::class, 'callback'])->name('setup.callback');
 
+Route::post('/deploy-hook/{token}', [App\Http\Controllers\SiteDeploymentController::class, 'webhook'])->name('sites.deploy.webhook');
+
 Route::middleware('guest')->group(function (): void {
     Route::get('/login', [App\Http\Controllers\Auth\AuthenticatedSessionController::class, 'create'])->name('login');
     Route::post('/login', [App\Http\Controllers\Auth\AuthenticatedSessionController::class, 'store'])->name('login.store');

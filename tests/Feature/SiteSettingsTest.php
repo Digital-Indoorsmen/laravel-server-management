@@ -109,3 +109,14 @@ it('falls back to general section for invalid section parameter', function () {
         ->where('activeSection', 'general')
     );
 });
+
+it('triggers a deployment via webhook', function () {
+    \Illuminate\Support\Facades\Bus::fake();
+
+    $response = $this->post(route('sites.deploy.webhook', $this->site->deploy_hook_url));
+
+    $response->assertSuccessful();
+    $response->assertSee('Deployment queued successfully.');
+
+    \Illuminate\Support\Facades\Bus::assertDispatched(\App\Jobs\RunSiteDeployment::class);
+});

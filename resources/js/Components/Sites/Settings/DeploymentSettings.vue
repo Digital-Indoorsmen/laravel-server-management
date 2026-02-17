@@ -110,11 +110,11 @@ git pull origin main..."
                         <input
                             type="text"
                             readonly
-                            :value="route('setup.callback', site.deploy_hook_url)"
+                            :value="route('sites.deploy.webhook', { token: site.deploy_hook_url || 'missing' })"
                             class="input input-bordered join-item w-full text-sm"
                         />
                         <button
-                            @click="copyToClipboard(route('setup.callback', site.deploy_hook_url))"
+                            @click="copyToClipboard(route('sites.deploy.webhook', { token: site.deploy_hook_url || 'missing' }))"
                             class="btn btn-neutral join-item"
                             title="Copy to clipboard"
                         >

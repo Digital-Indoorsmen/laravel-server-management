@@ -8,6 +8,7 @@ use App\Models\Deployment;
 use App\Models\Site;
 use App\Services\SiteDeploymentService;
 use Illuminate\Http\RedirectResponse;
+use Illuminate\Http\Response as HttpResponse;
 use Inertia\Inertia;
 use Inertia\Response;
 
@@ -63,5 +64,21 @@ class SiteDeploymentController extends Controller
             ],
             'deployment' => $deployment->load('actor:id,name,email'),
         ]);
+    }
+
+    public function webhook(string $token): HttpResponse
+    {
+        $site = Site::where('deploy_hook_url', $token)->firstOrFail();
+
+        $deployment = $this->deploymentService->queue(
+            site: $site,
+            actorId: null,
+            triggeredVia: 'webhook',
+            branch: 'main',
+        );
+
+        RunSiteDeployment::dispatch($deployment->id)->onQueue('deployments');
+
+        return response('Deployment queued successfully.', 200);
     }
 }

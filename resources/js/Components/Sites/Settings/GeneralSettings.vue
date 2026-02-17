@@ -16,18 +16,29 @@ const props = defineProps({
     appTypes: Array,
 });
 
+const getRelativePath = (path) => {
+    const prefix = `/home/${props.site.system_user}/`;
+    return path.startsWith(prefix) ? path.substring(prefix.length) : path;
+};
+
 const form = useForm({
     app_type: props.site.app_type,
     php_version: props.site.php_version,
     tags: props.site.tags || [],
     notes: props.site.notes,
-    document_root: props.site.document_root,
+    document_root: getRelativePath(props.site.document_root),
     git_repository: props.site.git_repository,
     git_branch: props.site.git_branch,
 });
 
 const submit = () => {
-    form.patch(route("sites.workspace.settings.general.update", props.site.id), {
+    form.transform((data) => ({
+        ...data,
+        document_root:
+            data.document_root.startsWith("/") || data.document_root === ""
+                ? data.document_root
+                : `/home/${props.site.system_user}/${data.document_root}`,
+    })).patch(route("sites.workspace.settings.general.update", props.site.id), {
         preserveScroll: true,
     });
 };
