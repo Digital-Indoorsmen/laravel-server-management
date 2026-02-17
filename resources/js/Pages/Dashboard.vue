@@ -65,8 +65,14 @@ const systemStatsWithMeta = computed(() => {
     return props.systemStats.map((stat) => {
         // Use pattern matching for stats that may have dynamic suffixes
         let metadata;
-        
-        if (stat.name === "CPU Load") {
+
+        // Safety check for undefined stat or stat.name
+        if (!stat || !stat.name) {
+            metadata = {
+                icon: ServerIcon,
+                color: "text-base-content",
+            };
+        } else if (stat.name === "CPU Load") {
             metadata = {
                 icon: CpuChipIcon,
                 color: "text-blue-500",
