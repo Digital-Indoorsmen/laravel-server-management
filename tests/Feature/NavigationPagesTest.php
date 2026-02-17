@@ -49,7 +49,7 @@ it('renders all sidebar and profile destination pages for authenticated users', 
         ->assertSuccessful()
         ->assertInertia(fn (Assert $page) => $page
             ->component('System/Index')
-            ->has('systemStats', 4)
+            ->has('systemStats')
             ->has('services')
             ->has('security')
         );

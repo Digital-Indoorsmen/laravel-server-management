@@ -85,17 +85,6 @@ class SiteWorkspaceController extends Controller
         );
     }
 
-    public function settings(Site $site): Response
-    {
-        return $this->renderTab(
-            $site,
-            'settings',
-            'Settings',
-            'Site metadata and safe reconfiguration defaults.',
-            'Sites/Workspace/Settings',
-        );
-    }
-
     private function renderTab(Site $site, string $tab, string $title, string $description, string $component): Response
     {
         return Inertia::render($component, [

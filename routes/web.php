@@ -69,7 +69,10 @@ Route::middleware('auth')->group(function (): void {
         Route::get('/network', [App\Http\Controllers\SiteWorkspaceController::class, 'network'])->name('network');
         Route::get('/observe', [App\Http\Controllers\SiteWorkspaceController::class, 'observe'])->name('observe');
         Route::get('/domains', [App\Http\Controllers\SiteWorkspaceController::class, 'domains'])->name('domains');
-        Route::get('/settings', [App\Http\Controllers\SiteWorkspaceController::class, 'settings'])->name('settings');
+        Route::get('/settings/{section?}', [App\Http\Controllers\SiteSettingsController::class, 'show'])->name('settings');
+        Route::patch('/settings/general', [App\Http\Controllers\SiteSettingsController::class, 'updateGeneral'])->name('settings.general.update');
+        Route::patch('/settings/deployments', [App\Http\Controllers\SiteSettingsController::class, 'updateDeployments'])->name('settings.deployments.update');
+        Route::patch('/settings/environment', [App\Http\Controllers\SiteSettingsController::class, 'updateEnvironment'])->name('settings.environment.update');
     });
     Route::post('/logout', [App\Http\Controllers\Auth\AuthenticatedSessionController::class, 'destroy'])->name('logout');
 });

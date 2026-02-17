@@ -33,7 +33,7 @@ it('renders each site workspace tab for authenticated users', function (string $
         'setup_completed_at' => now(),
     ]);
 
-    $site = Site::query()->create([
+    $site = Site::factory()->create([
         'server_id' => $server->id,
         'domain' => 'workspace.test',
         'document_root' => '/home/workspace/public_html',
@@ -58,7 +58,7 @@ it('renders each site workspace tab for authenticated users', function (string $
 it('redirects guests from each site workspace tab to login', function (string $routeName): void {
     $server = Server::factory()->create();
 
-    $site = Site::query()->create([
+    $site = Site::factory()->create([
         'server_id' => $server->id,
         'domain' => fake()->unique()->domainName(),
         'document_root' => '/home/guest/public_html',

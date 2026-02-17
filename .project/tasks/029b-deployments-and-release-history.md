@@ -1,4 +1,4 @@
-# Status: [x] Complete
+# Status: [ ] Not Complete
 # Title: Deployments and Release History
 
 ## Parent
@@ -24,6 +24,6 @@ Implement deployment execution and historical visibility similar to Forge Deploy
 - Authorization and validation tests.
 
 ## Completion Criteria
-- [x] Deployments can be triggered and tracked end-to-end
-- [x] Deployment history and logs are visible in UI
-- [x] CLI deploy command works for a site
+- [ ] Deployments can be triggered and tracked end-to-end
+- [ ] Deployment history and logs are visible in UI
+- [ ] CLI deploy command works for a site

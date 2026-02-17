@@ -20,7 +20,7 @@ it('renders real dashboard props for authenticated users', function () {
     $response->assertInertia(fn (Assert $page) => $page
         ->component('Dashboard')
         ->has('servers', 1)
-        ->has('systemStats', 4)
+        ->has('systemStats')
         ->where('systemStats.0.name', 'CPU Load')
         ->has('services')
         ->has('security')

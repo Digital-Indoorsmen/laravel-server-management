@@ -343,12 +343,6 @@ class PanelCli extends Command
             ['php', 'artisan', 'queue:restart'],
         ];
 
-        // Ensure site provisioning sudoers is configured (idempotent)
-        $this->ensureSiteProvisioningSudoers();
-
-        // Ensure local server has an SSH key for provisioning via SSH to localhost
-        $this->ensureLocalServerSshKey();
-
         if ($this->option('dry-run')) {
             $this->components->info('Dry run enabled. No commands will be executed.');
 
@@ -389,6 +383,10 @@ class PanelCli extends Command
                 return self::FAILURE;
             }
         }
+
+        // Post-deploy setup (runs after new code is pulled and installed)
+        $this->ensureSiteProvisioningSudoers();
+        $this->ensureLocalServerSshKey();
 
         $this->components->info('Panel update complete.');
 

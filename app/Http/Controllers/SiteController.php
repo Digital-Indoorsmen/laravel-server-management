@@ -58,9 +58,11 @@ class SiteController extends Controller
                 'system_user' => $validated['system_user'],
                 'php_version' => $validated['php_version'],
                 'app_type' => $validated['app_type'],
-                'web_server' => $server->web_server ?? 'nginx', // Auto-detect from server
+                'web_server' => $server->web_server ?? 'nginx',
                 'document_root' => $documentRoot,
                 'status' => 'creating',
+                'deploy_hook_url' => Str::random(64),
+                'deploy_script' => $this->getDefaultDeployScript($validated['app_type']),
             ]);
 
             if ($request->boolean('create_database')) {
@@ -161,5 +163,30 @@ class SiteController extends Controller
         } catch (\Exception $e) {
             return back()->withErrors(['error' => 'Failed to update environment: '.$e->getMessage()]);
         }
+    }
+
+    protected function getDefaultDeployScript(string $appType): string
+    {
+        return match ($appType) {
+            'laravel' => <<<'BASH'
+cd /home/{{system_user}}/public_html
+git pull origin {{branch}}
+composer install --no-interaction --prefer-dist --optimize-autoloader
+php artisan migrate --force
+if [ -f artisan ]; then
+    php artisan config:cache
+    php artisan route:cache
+    php artisan view:cache
+fi
+BASH,
+            'wordpress' => <<<'BASH'
+cd /home/{{system_user}}/public_html
+git pull origin {{branch}}
+BASH,
+            default => <<<'BASH'
+cd /home/{{system_user}}/public_html
+git pull origin {{branch}}
+BASH,
+        };
     }
 }
