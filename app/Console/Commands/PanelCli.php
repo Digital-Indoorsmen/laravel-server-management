@@ -2,15 +2,15 @@
 
 namespace App\Console\Commands;
 
-use App\Jobs\InstallDatabaseEngine;
+use App\Jobs\InstallSoftware;
 use App\Jobs\RunSiteDeployment;
-use App\Models\DatabaseEngineInstallation;
 use App\Models\Server;
 use App\Models\Site;
-use App\Services\DatabaseProvisioningService;
+use App\Models\SoftwareInstallation;
 use App\Services\PanelHealthService;
 use App\Services\SiteDeploymentService;
 use App\Services\SiteProvisioningService;
+use App\Services\SoftwareProvisioningService;
 use Illuminate\Console\Command;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
@@ -45,7 +45,7 @@ class PanelCli extends Command
         protected PanelHealthService $panelHealth,
         protected SiteProvisioningService $siteProvisioning,
         protected SiteDeploymentService $siteDeploymentService,
-        protected DatabaseProvisioningService $databaseProvisioning
+        protected SoftwareProvisioningService $softwareProvisioning
     ) {
         parent::__construct();
     }
@@ -145,7 +145,7 @@ class PanelCli extends Command
             }
         }
 
-        $installation = DatabaseEngineInstallation::query()->create([
+        $installation = SoftwareInstallation::query()->create([
             'server_id' => $server->id,
             'type' => $type,
             'version' => $version,
@@ -153,7 +153,7 @@ class PanelCli extends Command
             'status' => 'queued',
         ]);
 
-        InstallDatabaseEngine::dispatch($installation->id);
+        InstallSoftware::dispatch($installation->id);
 
         $this->components->info("Installation of {$type} v{$version} queued for server {$server->name}.");
         $this->line("You can monitor progress in the web panel or via 'larapanel status'.");
@@ -190,14 +190,14 @@ class PanelCli extends Command
             return self::FAILURE;
         }
 
-        $installation = DatabaseEngineInstallation::query()->create([
+        $installation = SoftwareInstallation::query()->create([
             'server_id' => $server->id,
             'type' => $type,
             'action' => 'upgrade',
             'status' => 'queued',
         ]);
 
-        InstallDatabaseEngine::dispatch($installation->id);
+        InstallSoftware::dispatch($installation->id);
 
         $this->components->info("Upgrade of {$type} queued for server {$server->name}.");
 

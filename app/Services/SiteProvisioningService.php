@@ -9,7 +9,7 @@ class SiteProvisioningService
 {
     public function __construct(
         protected ServerConnectionService $connection,
-        protected DatabaseProvisioningService $dbProvisioner
+        protected SoftwareProvisioningService $softwareProvisioner
     ) {}
 
     public function provision(Site $site): void
@@ -34,7 +34,7 @@ class SiteProvisioningService
             // 5. Provision Databases
             if ($site->databases()->exists()) {
                 foreach ($site->databases as $database) {
-                    $this->dbProvisioner->provision($database);
+                    $this->softwareProvisioner->provision($database);
                 }
                 $this->configureEnvWithDatabase($site);
             }

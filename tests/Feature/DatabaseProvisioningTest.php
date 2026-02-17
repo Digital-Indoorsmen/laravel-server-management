@@ -4,9 +4,9 @@ use App\Models\Database;
 use App\Models\Server;
 use App\Models\Site;
 use App\Models\User;
-use App\Services\DatabaseProvisioningService;
 use App\Services\ServerConnectionService;
 use App\Services\SiteProvisioningService;
+use App\Services\SoftwareProvisioningService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Mockery\MockInterface;
 
@@ -45,7 +45,7 @@ test('database provisioning service provisions mariadb', function () {
         $mock->shouldReceive('runCommand')->andReturn(''); // Catch-all for others
     });
 
-    $service = app(DatabaseProvisioningService::class);
+    $service = app(SoftwareProvisioningService::class);
     $service->provision($database);
 
     expect($database->fresh()->status)->toBe('active');
@@ -101,7 +101,7 @@ test('database provisioning service provisions postgresql', function () {
             ->once();
     });
 
-    $service = app(DatabaseProvisioningService::class);
+    $service = app(SoftwareProvisioningService::class);
     $service->provision($database);
 
     expect($database->fresh()->status)->toBe('active');

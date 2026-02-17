@@ -4,10 +4,10 @@ use App\Console\Commands\PanelCli;
 use App\Jobs\RunSiteDeployment;
 use App\Models\Server;
 use App\Models\Site;
-use App\Services\DatabaseProvisioningService;
 use App\Services\PanelHealthService;
 use App\Services\SiteDeploymentService;
 use App\Services\SiteProvisioningService;
+use App\Services\SoftwareProvisioningService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Queue;
 
@@ -106,7 +106,7 @@ it('can preview update commands without executing them', function () {
 });
 
 it('wraps root-run update commands in owner shell with bun-aware environment', function () {
-    $command = new class(app(PanelHealthService::class), app(SiteProvisioningService::class), app(SiteDeploymentService::class), app(DatabaseProvisioningService::class)) extends PanelCli
+    $command = new class(app(PanelHealthService::class), app(SiteProvisioningService::class), app(SiteDeploymentService::class), app(SoftwareProvisioningService::class)) extends PanelCli
     {
         protected function isRunningAsRoot(): bool
         {
@@ -179,11 +179,11 @@ it('queues a database engine installation from cli', function () {
         ->expectsOutputToContain('Installation of mariadb v10.3 queued')
         ->assertSuccessful();
 
-    $this->assertDatabaseHas('database_engine_installations', [
+    $this->assertDatabaseHas('software_installations', [
         'server_id' => $server->id,
         'type' => 'mariadb',
         'status' => 'queued',
     ]);
 
-    Queue::assertPushed(\App\Jobs\InstallDatabaseEngine::class);
+    Queue::assertPushed(\App\Jobs\InstallSoftware::class);
 });

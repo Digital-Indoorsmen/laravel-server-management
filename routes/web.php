@@ -33,7 +33,7 @@ Route::middleware('auth')->group(function (): void {
             ]);
         }
 
-        return redirect()->route('servers.database-engines.index', $server);
+        return redirect()->route('servers.software.index', $server);
     })->name('software.index');
     Route::get('/profile', App\Http\Controllers\ProfileController::class)->name('profile.show');
 
@@ -46,13 +46,13 @@ Route::middleware('auth')->group(function (): void {
     Route::get('/ssh-keys/{sshKey}/download', [App\Http\Controllers\SshKeyController::class, 'download'])->name('ssh-keys.download');
     Route::delete('/ssh-keys/{sshKey}', [App\Http\Controllers\SshKeyController::class, 'destroy'])->name('ssh-keys.destroy');
 
-    Route::post('/servers/{server}/test', [App\Http\Controllers\ServerController::class, 'testConnection'])->name('servers.test');
+    Route::get('/servers/{server}/test', [App\Http\Controllers\ServerController::class, 'testConnection'])->name('servers.test');
     Route::get('/servers/{server}/logs', [App\Http\Controllers\ServerController::class, 'logs'])->name('servers.logs');
     Route::patch('/servers/{server}/web-server', [App\Http\Controllers\ServerController::class, 'updateWebServer'])->name('servers.web-server.update');
 
-    Route::get('/servers/{server}/database-engines', [App\Http\Controllers\DatabaseEngineInstallationController::class, 'index'])->name('servers.database-engines.index');
-    Route::post('/servers/{server}/database-engines', [App\Http\Controllers\DatabaseEngineInstallationController::class, 'store'])->name('servers.database-engines.store');
-    Route::get('/database-engine-installations/{installation}', [App\Http\Controllers\DatabaseEngineInstallationController::class, 'show'])->name('database-engine-installations.show');
+    Route::get('/servers/{server}/software', [App\Http\Controllers\SoftwareInstallationController::class, 'index'])->name('servers.software.index');
+    Route::post('/servers/{server}/software', [App\Http\Controllers\SoftwareInstallationController::class, 'store'])->name('servers.software.store');
+    Route::get('/software-installations/{installation}', [App\Http\Controllers\SoftwareInstallationController::class, 'show'])->name('software-installations.show');
 
     Route::resource('servers.sites', App\Http\Controllers\SiteController::class)->shallow();
     Route::get('/sites/{site}/env', [App\Http\Controllers\SiteController::class, 'env'])->name('sites.env');

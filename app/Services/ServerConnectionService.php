@@ -61,17 +61,49 @@ class ServerConnectionService
     }
 
     /**
-     * Run a command on a server.
+     * Run a command on a server with optional output callback for streaming.
      */
-    public function runCommand(Server $server, string $command): string
+    public function execute(Server $server, string $command, ?callable $callback = null): string
     {
         if ($this->isLocalServer($server)) {
-            return $this->runLocalCommand($command);
+            return $this->runLocalCommandWithCallback($command, $callback);
         }
 
         $ssh = $this->getSshConnection($server);
 
-        return $ssh->exec($command);
+        return $ssh->exec($command, $callback);
+    }
+
+    /**
+     * Run a command locally with an optional callback for output streaming.
+     */
+    protected function runLocalCommandWithCallback(string $command, ?callable $callback = null): string
+    {
+        $process = \Symfony\Component\Process\Process::fromShellCommandline($command);
+        $process->setTimeout(null); // No timeout for long-running scripts
+
+        $fullOutput = '';
+
+        $process->run(function ($type, $buffer) use (&$fullOutput, $callback) {
+            $fullOutput .= $buffer;
+            if ($callback) {
+                $callback($buffer);
+            }
+        });
+
+        if (! $process->isSuccessful()) {
+            throw new \RuntimeException("Local command execution failed [{$process->getExitCode()}]: {$process->getErrorOutput()}");
+        }
+
+        return $fullOutput;
+    }
+
+    /**
+     * Run a command on a server.
+     */
+    public function runCommand(Server $server, string $command): string
+    {
+        return $this->execute($server, $command);
     }
 
     /**

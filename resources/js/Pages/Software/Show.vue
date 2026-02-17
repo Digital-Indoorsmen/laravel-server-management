@@ -69,7 +69,7 @@ const getStatusBadgeClass = (status) => {
 </script>
 
 <template>
-    <Head :title="`Installing ${installation.type}`" />
+    <Head :title="`${installation.action}ing ${installation.type}`" />
 
     <AppLayout>
         <div class="space-y-6">
@@ -77,10 +77,7 @@ const getStatusBadgeClass = (status) => {
                 <div class="flex items-center gap-4">
                     <Link
                         :href="
-                            route(
-                                'servers.database-engines.index',
-                                installation.server_id,
-                            )
+                            route('servers.software.index', installation.server_id)
                         "
                         class="btn btn-sm btn-ghost btn-circle"
                     >
@@ -94,7 +91,9 @@ const getStatusBadgeClass = (status) => {
                             <span class="uppercase">{{
                                 installation.type
                             }}</span>
-                            Installation
+                            <span class="capitalize">{{
+                                installation.action
+                            }}</span>
                         </h1>
                         <p class="text-base-content/60">
                             {{ installation.server.name }} ({{
@@ -131,9 +130,7 @@ const getStatusBadgeClass = (status) => {
                 >
                     <div class="flex items-center gap-2">
                         <div class="flex gap-1.5">
-                            <div
-                                class="w-2.5 h-2.5 rounded-full bg-error/50"
-                            ></div>
+                            <div class="w-2.5 h-2.5 rounded-full bg-error/50"></div>
                             <div
                                 class="w-2.5 h-2.5 rounded-full bg-warning/50"
                             ></div>
@@ -165,26 +162,14 @@ const getStatusBadgeClass = (status) => {
                 </div>
             </div>
 
-            <div
-                v-if="installation.status === 'active'"
-                class="alert alert-success"
-            >
+            <div v-if="installation.status === 'active'" class="alert alert-success">
                 <CheckCircleIcon class="h-6 w-6" />
-                <span
-                    >Engine installation completed successfully! Root password
-                    has been secured.</span
-                >
+                <span>{{ installation.action }} completed successfully!</span>
             </div>
 
-            <div
-                v-if="installation.status === 'error'"
-                class="alert alert-error"
-            >
+            <div v-if="installation.status === 'error'" class="alert alert-error">
                 <XCircleIcon class="h-6 w-6" />
-                <span
-                    >Installation failed. Please review the logs above for
-                    details.</span
-                >
+                <span>{{ installation.action }} failed. Please review the logs above for details.</span>
             </div>
         </div>
     </AppLayout>

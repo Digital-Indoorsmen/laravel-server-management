@@ -3,12 +3,12 @@
 namespace App\Services;
 
 use App\Models\Database;
-use App\Models\DatabaseEngineInstallation;
 use App\Models\Server;
+use App\Models\SoftwareInstallation;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Str;
 
-class DatabaseProvisioningService
+class SoftwareProvisioningService
 {
     public function __construct(
         protected ServerConnectionService $connection
@@ -32,7 +32,7 @@ class DatabaseProvisioningService
         }
     }
 
-    public function installEngine(DatabaseEngineInstallation $installation): void
+    public function installSoftware(SoftwareInstallation $installation): void
     {
         $server = $installation->server;
         $type = $installation->type;
@@ -42,6 +42,7 @@ class DatabaseProvisioningService
             $installation->update([
                 'status' => 'installing',
                 'started_at' => now(),
+                'log' => '',
             ]);
 
             $rootPassword = Str::password(32);
@@ -49,26 +50,42 @@ class DatabaseProvisioningService
                 'mariadb' => $this->getMariaDbInstallScript($rootPassword, $version),
                 'mysql' => $this->getMysqlInstallScript($rootPassword, $version),
                 'postgresql' => $this->getPostgreSqlInstallScript($rootPassword, $version),
-                default => throw new \RuntimeException("Unsupported database type: {$type}"),
+                'php' => $this->getPhpInstallScript($version),
+                default => throw new \RuntimeException("Unsupported software type: {$type}"),
             };
 
-            $output = $this->connection->runCommand($server, $script);
+            $this->connection->execute($server, $script, function ($buffer) use ($installation) {
+                $installation->update([
+                    'log' => ($installation->log ?? '').$buffer,
+                ]);
+            });
 
             $installation->update([
                 'status' => 'active',
                 'finished_at' => now(),
-                'log' => ($installation->log ?? '')."\n".$output,
             ]);
 
-            // Update server's installed engines
-            $engines = $server->database_engines ?? [];
-            $engines[$type] = [
+            // Update server's installed software
+            $software = $server->software ?? [];
+            $software[$type][$version] = [
                 'status' => 'active',
-                'version' => $version,
                 'installed_at' => now()->toDateTimeString(),
-                'root_password' => $rootPassword,
+                'root_password' => in_array($type, ['mariadb', 'mysql', 'postgresql']) ? $rootPassword : null,
             ];
-            $server->update(['database_engines' => $engines]);
+
+            // Legacy support for existing database logic
+            if (in_array($type, ['mariadb', 'mysql', 'postgresql'])) {
+                $engines = $server->database_engines ?? [];
+                $engines[$type] = [
+                    'status' => 'active',
+                    'version' => $version,
+                    'installed_at' => now()->toDateTimeString(),
+                    'root_password' => $rootPassword,
+                ];
+                $server->update(['database_engines' => $engines]);
+            }
+
+            $server->update(['software' => $software]);
 
         } catch (\Exception $e) {
             $installation->update([
@@ -80,7 +97,7 @@ class DatabaseProvisioningService
         }
     }
 
-    public function upgradeEngine(DatabaseEngineInstallation $installation): void
+    public function upgradeSoftware(SoftwareInstallation $installation): void
     {
         $server = $installation->server;
         $type = $installation->type;
@@ -89,21 +106,26 @@ class DatabaseProvisioningService
             $installation->update([
                 'status' => 'installing',
                 'started_at' => now(),
+                'log' => '',
             ]);
 
             $script = match ($type) {
                 'mariadb' => $this->getMariaDbUpgradeScript(),
                 'mysql' => $this->getMysqlUpgradeScript(),
                 'postgresql' => $this->getPostgreSqlUpgradeScript(),
-                default => throw new \RuntimeException("Unsupported database type for upgrade: {$type}"),
+                'php' => $this->getPhpUpgradeScript($installation->version),
+                default => throw new \RuntimeException("Unsupported software type for upgrade: {$type}"),
             };
 
-            $output = $this->connection->runCommand($server, $script);
+            $this->connection->execute($server, $script, function ($buffer) use ($installation) {
+                $installation->update([
+                    'log' => ($installation->log ?? '').$buffer,
+                ]);
+            });
 
             $installation->update([
                 'status' => 'active',
                 'finished_at' => now(),
-                'log' => ($installation->log ?? '')."\n".$output,
             ]);
         } catch (\Exception $e) {
             $installation->update([
@@ -115,51 +137,46 @@ class DatabaseProvisioningService
         }
     }
 
-    protected function getMariaDbUpgradeScript(): string
-    {
-        return <<<'BASH'
-set -e
-echo "Upgrading MariaDB packages..."
-sudo dnf upgrade -y mariadb-server mariadb
-echo "Running mysql_upgrade..."
-sudo mysql_upgrade -u root || echo "mysql_upgrade might not be needed or already completed."
-echo "Restarting MariaDB..."
-sudo systemctl restart mariadb
-echo "MariaDB upgrade complete."
-BASH;
-    }
-
-    protected function getMysqlUpgradeScript(): string
-    {
-        return <<<'BASH'
-set -e
-echo "Upgrading MySQL packages..."
-sudo dnf upgrade -y mysql-server mysql
-echo "Restarting MySQL..."
-sudo systemctl restart mysqld
-echo "MySQL upgrade complete."
-BASH;
-    }
-
-    protected function getPostgreSqlUpgradeScript(): string
-    {
-        return <<<'BASH'
-set -e
-echo "Upgrading PostgreSQL packages..."
-sudo dnf upgrade -y postgresql-server postgresql-contrib
-echo "PostgreSQL minor upgrade complete. Major upgrades require manual orchestration (pg_upgrade) and are not handled automatically yet."
-sudo systemctl restart postgresql
-BASH;
-    }
-
     protected function getDefaultVersion(string $type): string
     {
         return match ($type) {
             'mariadb' => '10.11',
             'mysql' => '8.0',
             'postgresql' => '16',
+            'php' => '8.4',
             default => 'latest',
         };
+    }
+
+    protected function getPhpInstallScript(string $version): string
+    {
+        $v = str_replace('.', '', $version); // 8.4 -> 84
+
+        return <<<BASH
+set -e
+echo "Installing PHP {$version}..."
+sudo dnf install -y https://rpms.remirepo.net/enterprise/remi-release-9.rpm || true
+sudo dnf module reset php -y || true
+sudo dnf install -y php{$v}-php-fpm php{$v}-php-common php{$v}-php-mbstring php{$v}-php-xml php{$v}-php-mysqlnd php{$v}-php-gd php{$v}-php-curl php{$v}-php-zip php{$v}-php-bcmath php{$v}-php-intl php{$v}-php-opcache php{$v}-php-cli
+
+echo "Enabling PHP {$version} service..."
+sudo systemctl enable --now php{$v}-php-fpm
+
+echo "PHP {$version} installation complete."
+BASH;
+    }
+
+    protected function getPhpUpgradeScript(string $version): string
+    {
+        $v = str_replace('.', '', $version);
+
+        return <<<BASH
+set -e
+echo "Upgrading PHP {$version} packages..."
+sudo dnf upgrade -y php{$v}-*
+sudo systemctl restart php{$v}-php-fpm
+echo "PHP {$version} upgrade complete."
+BASH;
     }
 
     protected function getMariaDbInstallScript(string $rootPassword, string $version): string
@@ -231,6 +248,43 @@ echo "Setting postgres user password..."
 sudo -u postgres psql -c "ALTER USER postgres WITH PASSWORD '{$escapedPassword}';"
 
 echo "PostgreSQL installation complete."
+BASH;
+    }
+
+    protected function getMariaDbUpgradeScript(): string
+    {
+        return <<<'BASH'
+set -e
+echo "Upgrading MariaDB packages..."
+sudo dnf upgrade -y mariadb-server mariadb
+echo "Running mysql_upgrade..."
+sudo mysql_upgrade -u root || echo "mysql_upgrade might not be needed or already completed."
+echo "Restarting MariaDB..."
+sudo systemctl restart mariadb
+echo "MariaDB upgrade complete."
+BASH;
+    }
+
+    protected function getMysqlUpgradeScript(): string
+    {
+        return <<<'BASH'
+set -e
+echo "Upgrading MySQL packages..."
+sudo dnf upgrade -y mysql-server mysql
+echo "Restarting MySQL..."
+sudo systemctl restart mysqld
+echo "MySQL upgrade complete."
+BASH;
+    }
+
+    protected function getPostgreSqlUpgradeScript(): string
+    {
+        return <<<'BASH'
+set -e
+echo "Upgrading PostgreSQL packages..."
+sudo dnf upgrade -y postgresql-server postgresql-contrib
+echo "PostgreSQL minor upgrade complete. Major upgrades require manual orchestration (pg_upgrade) and are not handled automatically yet."
+sudo systemctl restart postgresql
 BASH;
     }
 

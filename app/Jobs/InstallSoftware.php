@@ -2,12 +2,12 @@
 
 namespace App\Jobs;
 
-use App\Models\DatabaseEngineInstallation;
-use App\Services\DatabaseProvisioningService;
+use App\Models\SoftwareInstallation;
+use App\Services\SoftwareProvisioningService;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Queue\Queueable;
 
-class InstallDatabaseEngine implements ShouldQueue
+class InstallSoftware implements ShouldQueue
 {
     use Queueable;
 
@@ -21,16 +21,16 @@ class InstallDatabaseEngine implements ShouldQueue
     /**
      * Execute the job.
      */
-    public function handle(DatabaseProvisioningService $service): void
+    public function handle(SoftwareProvisioningService $service): void
     {
-        $installation = DatabaseEngineInstallation::findOrFail($this->installationId);
+        $installation = SoftwareInstallation::findOrFail($this->installationId);
 
         if ($installation->action === 'upgrade') {
-            $service->upgradeEngine($installation);
+            $service->upgradeSoftware($installation);
 
             return;
         }
 
-        $service->installEngine($installation);
+        $service->installSoftware($installation);
     }
 }

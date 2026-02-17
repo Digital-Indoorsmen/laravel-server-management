@@ -2,11 +2,11 @@
 import AppLayout from "@/Layouts/AppLayout.vue";
 import { Head, Link, useForm } from "@inertiajs/vue3";
 import {
-    CircleStackIcon,
     CommandLineIcon,
     PlayIcon,
     ArrowUpCircleIcon,
     CheckCircleIcon,
+    CpuChipIcon,
 } from "@heroicons/vue/24/outline";
 
 import { onMounted, ref } from "vue";
@@ -15,8 +15,8 @@ import { useConfirmation } from "@/Stores/useConfirmation";
 const props = defineProps({
     server: Object,
     installations: Array,
-    availableEngines: Array,
-    installedEngines: Object,
+    availableSoftware: Array,
+    installedSoftware: Object,
 });
 
 const form = useForm({
@@ -29,17 +29,18 @@ const selectedVersions = ref({});
 const confirmation = useConfirmation();
 
 onMounted(() => {
-    props.availableEngines.forEach((engine) => {
-        selectedVersions.value[engine.id] =
-            engine.versions[engine.versions.length - 1];
+    props.availableSoftware.forEach((item) => {
+        selectedVersions.value[item.id] =
+            item.versions[item.versions.length - 1];
     });
 });
 
 const install = async (type) => {
     const version = selectedVersions.value[type];
+    const item = props.availableSoftware.find((s) => s.id === type);
     const confirmed = await confirmation.ask({
-        title: `Install ${type}`,
-        message: `Are you sure you want to install ${type} v${version}?`,
+        title: `Install ${item.name}`,
+        message: `Are you sure you want to install ${item.name} v${version}?`,
         type: "primary",
     });
 
@@ -47,21 +48,22 @@ const install = async (type) => {
         form.type = type;
         form.version = version;
         form.action = "install";
-        form.post(route("servers.database-engines.store", props.server.id));
+        form.post(route("servers.software.store", props.server.id));
     }
 };
 
 const upgrade = async (type) => {
+    const item = props.availableSoftware.find((s) => s.id === type);
     const confirmed = await confirmation.ask({
-        title: `Upgrade ${type}`,
-        message: `Are you sure you want to upgrade ${type}? This will run dnf upgrade and restart the service.`,
+        title: `Upgrade ${item.name}`,
+        message: `Are you sure you want to upgrade ${item.name}? This will run system updates and restart the service.`,
         type: "warning",
     });
 
     if (confirmed) {
         form.type = type;
         form.action = "upgrade";
-        form.post(route("servers.database-engines.store", props.server.id));
+        form.post(route("servers.software.store", props.server.id));
     }
 };
 
@@ -75,7 +77,7 @@ const getStatusBadgeClass = (status) => {
 </script>
 
 <template>
-    <Head title="Database Engines" />
+    <Head title="Server Software" />
 
     <AppLayout>
         <div class="space-y-6">
@@ -83,91 +85,80 @@ const getStatusBadgeClass = (status) => {
                 <h1
                     class="text-2xl font-bold text-base-content flex items-center gap-2"
                 >
-                    <CircleStackIcon class="h-8 w-8 text-primary" />
-                    Database Engines
+                    <CpuChipIcon class="h-8 w-8 text-primary" />
+                    Server Software
                 </h1>
                 <p class="text-base-content/60">
-                    Manage database software on {{ server.name }}.
+                    Manage system software and runtimes on {{ server.name }}.
                 </p>
             </div>
 
             <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <div
-                    v-for="engine in availableEngines"
-                    :key="engine.id"
+                    v-for="item in availableSoftware"
+                    :key="item.id"
                     class="card bg-base-100 border border-base-300 shadow-sm"
                 >
                     <div class="card-body">
                         <div class="flex items-center justify-between">
-                            <h2 class="card-title">{{ engine.name }}</h2>
-                            <span
-                                v-if="installedEngines[engine.id]"
-                                class="badge badge-success gap-1"
-                            >
-                                <CheckCircleIcon class="h-4 w-4" />
-                                {{
-                                    installedEngines[engine.id].version
-                                        ? `v${installedEngines[engine.id].version}`
-                                        : "Installed"
-                                }}
-                            </span>
-                            <span v-else class="badge badge-soft"
-                                >Not Installed</span
-                            >
+                            <h2 class="card-title">{{ item.name }}</h2>
+                            <div class="flex gap-1 flex-wrap justify-end">
+                                <template v-if="item.installed_versions.length > 0">
+                                    <span
+                                        v-for="v in item.installed_versions"
+                                        :key="v"
+                                        class="badge badge-success gap-1"
+                                    >
+                                        <CheckCircleIcon class="h-3 w-3" />
+                                        v{{ v }}
+                                    </span>
+                                </template>
+                                <span v-else class="badge badge-soft">Not Installed</span>
+                            </div>
                         </div>
 
-                        <div
-                            v-if="!installedEngines[engine.id]"
-                            class="form-control w-full max-w-xs mt-2"
-                        >
+                        <div class="form-control w-full max-w-xs mt-2">
                             <label class="label py-1">
-                                <span class="label-text-alt">Version</span>
+                                <span class="label-text-alt">Version to Install</span>
                             </label>
                             <select
-                                v-model="selectedVersions[engine.id]"
+                                v-model="selectedVersions[item.id]"
                                 class="select select-bordered select-sm w-full"
                             >
                                 <option
-                                    v-for="v in engine.versions"
+                                    v-for="v in item.versions"
                                     :key="v"
                                     :value="v"
                                 >
-                                    {{ engine.name }} {{ v }}
+                                    {{ item.name }} {{ v }}
                                 </option>
                             </select>
                         </div>
 
                         <p class="text-sm opacity-70 py-2">
-                            Manage and provision {{ engine.name }} databases on
+                            Manage and provision {{ item.name }} on
                             this server.
                         </p>
 
                         <div class="card-actions justify-end mt-4">
                             <button
-                                v-if="!installedEngines[engine.id]"
-                                @click="install(engine.id)"
+                                @click="install(item.id)"
                                 class="btn btn-primary btn-sm"
                                 :disabled="form.processing"
                             >
                                 <PlayIcon class="h-4 w-4" />
-                                Install {{ engine.name }}
+                                Install
                             </button>
-                            <div v-else class="flex flex-col items-end gap-2">
-                                <span class="text-xs opacity-50"
-                                    >Installed on
-                                    {{
-                                        installedEngines[engine.id].installed_at
-                                    }}</span
-                                >
-                                <button
-                                    @click="upgrade(engine.id)"
-                                    class="btn btn-outline btn-xs gap-1"
-                                    :disabled="form.processing"
-                                >
-                                    <ArrowUpCircleIcon class="h-3.5 w-3.5" />
-                                    Upgrade
-                                </button>
-                            </div>
+                            
+                            <button 
+                                v-if="item.upgradeAvailable"
+                                @click="upgrade(item.id)"
+                                class="btn btn-outline btn-xs gap-1"
+                                :disabled="form.processing"
+                            >
+                                <ArrowUpCircleIcon class="h-3.5 w-3.5" />
+                                Upgrade
+                            </button>
                         </div>
                     </div>
                 </div>
@@ -184,7 +175,7 @@ const getStatusBadgeClass = (status) => {
                         <table class="table table-zebra">
                             <thead>
                                 <tr>
-                                    <th>Engine</th>
+                                    <th>Software</th>
                                     <th>Version</th>
                                     <th>Action</th>
                                     <th>Status</th>
@@ -233,7 +224,7 @@ const getStatusBadgeClass = (status) => {
                                         <Link
                                             :href="
                                                 route(
-                                                    'database-engine-installations.show',
+                                                    'software-installations.show',
                                                     install.id,
                                                 )
                                             "
@@ -245,7 +236,7 @@ const getStatusBadgeClass = (status) => {
                                 </tr>
                                 <tr v-if="installations.length === 0">
                                     <td
-                                        colspan="5"
+                                        colspan="7"
                                         class="text-center py-8 opacity-50 italic"
                                     >
                                         No installation history found.
