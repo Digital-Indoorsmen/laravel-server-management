@@ -1,7 +1,9 @@
 <script setup>
 import AppLayout from "@/Layouts/AppLayout.vue";
-import { Head, Link } from "@inertiajs/vue3";
-import { CircleStackIcon } from "@heroicons/vue/24/outline";
+import { Head, Link, usePage } from "@inertiajs/vue3";
+import { CircleStackIcon, CommandLineIcon } from "@heroicons/vue/24/outline";
+
+const page = usePage();
 
 defineProps({
     databases: {
@@ -16,16 +18,26 @@ defineProps({
 
     <AppLayout>
         <div class="space-y-6">
-            <div>
-                <h1
-                    class="text-2xl font-bold tracking-tight text-base-content flex items-center gap-2"
+            <div class="flex items-center justify-between">
+                <div>
+                    <h1
+                        class="text-2xl font-bold tracking-tight text-base-content flex items-center gap-2"
+                    >
+                        <CircleStackIcon class="h-8 w-8 text-primary" />
+                        Databases
+                    </h1>
+                    <p class="text-base-content/60">
+                        Database users and schemas created during site
+                        provisioning.
+                    </p>
+                </div>
+                <Link
+                    :href="route('software.index')"
+                    class="btn btn-outline btn-primary btn-sm gap-2"
                 >
-                    <CircleStackIcon class="h-8 w-8 text-primary" />
-                    Databases
-                </h1>
-                <p class="text-base-content/60">
-                    Database users and schemas created during site provisioning.
-                </p>
+                    <CommandLineIcon class="h-4 w-4" />
+                    Manage Engines
+                </Link>
             </div>
 
             <div class="card bg-base-100 border border-base-300 shadow-sm">

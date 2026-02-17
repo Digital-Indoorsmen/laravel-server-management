@@ -7,7 +7,7 @@ import {
     GlobeAltIcon,
     CircleStackIcon,
     KeyIcon,
-    CommandLineIcon,
+    CpuChipIcon,
 } from "@heroicons/vue/24/outline";
 
 const page = usePage();
@@ -40,13 +40,10 @@ const navigation = computed(() => [
         startsWith: "/databases",
     },
     {
-        name: "DB Engines",
-        href: page.props.hostServerId
-            ? route("servers.database-engines.index", page.props.hostServerId)
-            : "#",
-        icon: CommandLineIcon,
+        name: "Software",
+        href: route("software.index"),
+        icon: CpuChipIcon,
         startsWith: "/servers",
-        hidden: !page.props.hostServerId,
     },
     {
         name: "SSH Keys",

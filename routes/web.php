@@ -20,6 +20,21 @@ Route::middleware('auth')->group(function (): void {
     Route::post('/system/services/{service}/{action}', App\Http\Controllers\SystemServiceController::class)->name('system.services.control');
     Route::get('/sites', App\Http\Controllers\SiteCatalogController::class)->name('sites.catalog');
     Route::get('/databases', App\Http\Controllers\DatabaseController::class)->name('databases.index');
+    Route::get('/software', function () {
+        $server = \App\Models\Server::query()->first();
+        if (! $server) {
+            $server = \App\Models\Server::query()->create([
+                'name' => 'Local Server',
+                'ip_address' => '127.0.0.1',
+                'hostname' => gethostname() ?: 'localhost',
+                'os_version' => 'rocky_9',
+                'status' => 'active',
+                'web_server' => 'nginx',
+            ]);
+        }
+
+        return redirect()->route('servers.database-engines.index', $server);
+    })->name('software.index');
     Route::get('/profile', App\Http\Controllers\ProfileController::class)->name('profile.show');
 
     Route::get('/settings', [App\Http\Controllers\SettingsController::class, 'index'])->name('settings.index');
