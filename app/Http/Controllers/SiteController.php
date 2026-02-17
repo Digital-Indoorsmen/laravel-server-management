@@ -58,7 +58,7 @@ class SiteController extends Controller
                 'system_user' => $validated['system_user'],
                 'php_version' => $validated['php_version'],
                 'app_type' => $validated['app_type'],
-                'web_server' => $validated['web_server'] ?? null,
+                'web_server' => $server->web_server ?? 'nginx', // Auto-detect from server
                 'document_root' => $documentRoot,
                 'status' => 'creating',
             ]);

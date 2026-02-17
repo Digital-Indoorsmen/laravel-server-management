@@ -142,14 +142,22 @@ class ServerConnectionService
      */
     protected function runLocalCommand(string $command): string
     {
-        // We use proc_open or shell_exec for local commands.
-        // Since we need to capture output and handle potentially long running scripts,
-        // we'll use a simple shell_exec for now, but in a production environment
-        // we might want something more robust like Symfony Process.
+        // For local commands, we need to ensure the web server user has passwordless sudo
+        // configured, otherwise provisioning will fail.
         $output = shell_exec($command.' 2>&1');
 
         if ($output === null) {
             throw new \Exception("Local command execution failed: {$command}");
+        }
+
+        // Check if sudo is asking for a password
+        if (str_contains($output, 'a password is required') || str_contains($output, 'sudo: unable to open')) {
+            throw new \RuntimeException(
+                "Local server provisioning requires passwordless sudo for the web server user.\n".
+                "Please configure /etc/sudoers.d/panel-user with:\n".
+                "caddy ALL=(ALL) NOPASSWD: ALL\n\n".
+                'Or use SSH by ensuring the server has an SSH key configured.'
+            );
         }
 
         return $output;

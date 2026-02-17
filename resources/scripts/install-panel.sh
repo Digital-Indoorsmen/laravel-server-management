@@ -139,6 +139,20 @@ EOF
     visudo -cf "${sudoers_file}" >/dev/null
 }
 
+configure_site_provisioning_sudoers() {
+    local sudoers_file="/etc/sudoers.d/laravel-panel-site-provisioning"
+
+    # Allow web server user full sudo access for local site provisioning
+    # This is required when the panel provisions sites on the same server it's running on
+    cat > "${sudoers_file}" <<EOF
+Defaults:${PANEL_WEB_SERVER} !requiretty
+${PANEL_WEB_SERVER} ALL=(ALL) NOPASSWD: ALL
+EOF
+
+    chmod 440 "${sudoers_file}"
+    visudo -cf "${sudoers_file}" >/dev/null
+}
+
 install_larapanel_cli() {
     local target="/usr/local/bin/larapanel"
 
@@ -394,6 +408,7 @@ fi
 
 ensure_group_exists "${PANEL_APP_GROUP}"
 configure_service_control_sudoers
+configure_site_provisioning_sudoers
 
 if [[ "${PANEL_WEB_SERVER}" == "caddy" ]]; then
     log "Installing Caddy..."

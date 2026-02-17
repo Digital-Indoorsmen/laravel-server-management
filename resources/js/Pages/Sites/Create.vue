@@ -11,7 +11,6 @@ const form = useForm({
     system_user: "",
     app_type: "generic",
     php_version: "8.3",
-    web_server: "",
     create_database: false,
     database_type: "mariadb",
 });
@@ -28,11 +27,6 @@ const suggestUser = () => {
 };
 
 const submit = () => {
-    form.transform((data) => ({
-        ...data,
-        web_server: data.web_server || null,
-    }));
-
     form.post(route("servers.sites.store", props.server.id));
 };
 </script>
@@ -167,30 +161,6 @@ const submit = () => {
                                 >
                                     {{ form.errors.php_version }}
                                 </div>
-                            </div>
-                        </div>
-
-                        <div class="form-control">
-                            <label class="label">
-                                <span class="label-text">Web Server</span>
-                                <span class="label-text-alt"
-                                    >Default:
-                                    {{ server.web_server || "nginx" }}</span
-                                >
-                            </label>
-                            <select
-                                v-model="form.web_server"
-                                class="select select-bordered"
-                            >
-                                <option value="">Use server default</option>
-                                <option value="nginx">Nginx</option>
-                                <option value="caddy">Caddy</option>
-                            </select>
-                            <div
-                                v-if="form.errors.web_server"
-                                class="text-error text-xs mt-1"
-                            >
-                                {{ form.errors.web_server }}
                             </div>
                         </div>
 

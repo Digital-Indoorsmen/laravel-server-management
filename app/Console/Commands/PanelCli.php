@@ -342,6 +342,9 @@ class PanelCli extends Command
             ['php', 'artisan', 'queue:restart'],
         ];
 
+        // Ensure site provisioning sudoers is configured (idempotent)
+        $this->ensureSiteProvisioningSudoers();
+
         if ($this->option('dry-run')) {
             $this->components->info('Dry run enabled. No commands will be executed.');
 
@@ -679,5 +682,39 @@ class PanelCli extends Command
         $this->components->info("Deployment {$deployment->id} queued for {$site->domain} on branch {$branch}.");
 
         return self::SUCCESS;
+    }
+
+    protected function ensureSiteProvisioningSudoers(): void
+    {
+        if (! $this->isRunningAsRoot()) {
+            $this->components->warn('Skipping sudoers configuration (not running as root).');
+
+            return;
+        }
+
+        $webServer = 'caddy';
+        if (shell_exec('systemctl is-active nginx 2>/dev/null') === "active\n") {
+            $webServer = 'nginx';
+        }
+
+        $sudoersFile = '/etc/sudoers.d/laravel-panel-site-provisioning';
+        $content = <<<EOF
+Defaults:{$webServer} !requiretty
+{$webServer} ALL=(ALL) NOPASSWD: ALL
+EOF;
+
+        file_put_contents($sudoersFile, $content);
+        chmod($sudoersFile, 0440);
+
+        // Validate sudoers file
+        $process = new Process(['visudo', '-cf', $sudoersFile]);
+        $process->run();
+
+        if (! $process->isSuccessful()) {
+            unlink($sudoersFile);
+            $this->components->error('Failed to configure site provisioning sudoers.');
+        } else {
+            $this->components->info('Site provisioning sudoers configured.');
+        }
     }
 }

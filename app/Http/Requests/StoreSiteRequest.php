@@ -26,7 +26,6 @@ class StoreSiteRequest extends FormRequest
             'system_user' => ['required', 'string', 'max:32', 'alpha_dash', 'unique:sites,system_user'],
             'php_version' => ['required', 'string', 'in:7.4,8.1,8.2,8.3,8.4,8.5'],
             'app_type' => ['required', 'string', 'in:wordpress,laravel,generic'],
-            'web_server' => ['nullable', 'string', 'in:nginx,caddy'],
             'create_database' => ['boolean'],
             'database_type' => ['required_if:create_database,true', 'string', 'in:mariadb,postgresql'],
         ];
