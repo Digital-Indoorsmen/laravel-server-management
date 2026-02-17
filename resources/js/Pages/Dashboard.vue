@@ -44,11 +44,21 @@ const props = defineProps({
 });
 
 const pendingServers = computed(() => {
-    return props.servers.filter((s) => !s.setup_completed_at);
+    return props.servers.filter(
+        (s) =>
+            !s.setup_completed_at &&
+            s.ip_address !== "127.0.0.1" &&
+            s.ip_address !== "localhost",
+    );
 });
 
 const activeServers = computed(() => {
-    return props.servers.filter((s) => !!s.setup_completed_at);
+    return props.servers.filter(
+        (s) =>
+            !!s.setup_completed_at ||
+            s.ip_address === "127.0.0.1" ||
+            s.ip_address === "localhost",
+    );
 });
 
 const systemStatsWithMeta = computed(() => {
