@@ -62,6 +62,14 @@ This application is a Laravel application and its main Laravel ecosystems packag
 ## Reading Browser Logs With the `browser-logs` Tool
 - You can read browser logs, errors, and exceptions using the `browser-logs` tool from Boost.
 - Only recent browser logs will be useful - ignore old logs.
+- **CRITICAL**: Browser logs are ONLY available in local development (macOS). This application runs on production Linux servers, so browser logs are NOT available on production. You must debug frontend errors by analyzing the code and backend data.
+
+## Deployment Context
+- **This application manages Linux servers** (AlmaLinux 8/9) and must be tested on production.
+- **Development is on macOS**, but the app provisions sites on Linux servers with SELinux, systemd, and other Linux-specific features.
+- **Browser logs**: Only available locally, NOT on production.
+- **Backend logs**: Available on production via Laravel logs.
+- **Frontend errors on production**: Must be debugged by analyzing code and backend data, not browser logs.
 
 ## Searching Documentation (Critically Important)
 - Boost comes with a powerful `search-docs` tool you should use before any other approaches when dealing with Laravel or Laravel ecosystem packages. This tool automatically passes a list of installed packages and their versions to the remote Boost API, so it returns only version-specific documentation for the user's circumstance. You should pass an array of packages to filter on if you know you need docs for particular packages.

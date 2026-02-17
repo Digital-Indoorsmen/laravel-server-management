@@ -63,27 +63,28 @@ const activeServers = computed(() => {
 
 const systemStatsWithMeta = computed(() => {
     return props.systemStats.map((stat) => {
-        const metadata = {
-            "CPU Load": {
-                icon: CpuChipIcon,
-                color: "text-blue-500",
-            },
-            "RAM Usage": {
-                icon: ViewColumnsIcon,
-                color: "text-green-500",
-            },
-            "Disk Space": {
-                icon: CircleStackIcon,
-                color: "text-purple-500",
-            },
-            "Swap Usage": {
-                icon: BoltIcon,
-                color: "text-orange-500",
-            },
-        }[stat.name] ?? {
-            icon: ServerIcon,
-            color: "text-base-content",
-        };
+        const metadata =
+            {
+                "CPU Load": {
+                    icon: CpuChipIcon,
+                    color: "text-blue-500",
+                },
+                "RAM Usage": {
+                    icon: ViewColumnsIcon,
+                    color: "text-green-500",
+                },
+                "Disk Space": {
+                    icon: CircleStackIcon,
+                    color: "text-purple-500",
+                },
+                "Swap Usage": {
+                    icon: BoltIcon,
+                    color: "text-orange-500",
+                },
+            }[stat.name] || {
+                icon: ServerIcon,
+                color: "text-base-content",
+            };
 
         return {
             ...stat,
