@@ -10,6 +10,7 @@ import {
 } from "@heroicons/vue/24/outline";
 
 import { onMounted, ref } from "vue";
+import { useConfirmation } from "@/Stores/useConfirmation";
 
 const props = defineProps({
     server: Object,
@@ -25,6 +26,7 @@ const form = useForm({
 });
 
 const selectedVersions = ref({});
+const confirmation = useConfirmation();
 
 onMounted(() => {
     props.availableEngines.forEach((engine) => {
@@ -33,9 +35,15 @@ onMounted(() => {
     });
 });
 
-const install = (type) => {
+const install = async (type) => {
     const version = selectedVersions.value[type];
-    if (confirm(`Are you sure you want to install ${type} v${version}?`)) {
+    const confirmed = await confirmation.ask({
+        title: `Install ${type}`,
+        message: `Are you sure you want to install ${type} v${version}?`,
+        type: "primary",
+    });
+
+    if (confirmed) {
         form.type = type;
         form.version = version;
         form.action = "install";
@@ -43,12 +51,14 @@ const install = (type) => {
     }
 };
 
-const upgrade = (type) => {
-    if (
-        confirm(
-            `Are you sure you want to upgrade ${type}? This will run dnf upgrade and restart the service.`,
-        )
-    ) {
+const upgrade = async (type) => {
+    const confirmed = await confirmation.ask({
+        title: `Upgrade ${type}`,
+        message: `Are you sure you want to upgrade ${type}? This will run dnf upgrade and restart the service.`,
+        type: "warning",
+    });
+
+    if (confirmed) {
         form.type = type;
         form.action = "upgrade";
         form.post(route("servers.database-engines.store", props.server.id));

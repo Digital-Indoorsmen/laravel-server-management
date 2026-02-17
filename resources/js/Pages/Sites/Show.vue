@@ -1,11 +1,28 @@
 <script setup>
 import AppLayout from "@/Layouts/AppLayout.vue";
-import { Head, Link } from "@inertiajs/vue3";
+import { Head, Link, useForm } from "@inertiajs/vue3";
 import { GlobeAltIcon } from "@heroicons/vue/24/outline";
+import { useConfirmation } from "@/Stores/useConfirmation";
 
-defineProps({
+const props = defineProps({
     site: Object,
 });
+
+const confirmation = useConfirmation();
+
+const deleteSite = async () => {
+    const confirmed = await confirmation.ask({
+        title: "Delete Site",
+        message:
+            "Are you sure you want to delete this site? This action cannot be undone.",
+        confirmLabel: "Delete",
+        type: "error",
+    });
+
+    if (confirmed) {
+        useForm({}).delete(route("sites.destroy", props.site.id));
+    }
+};
 </script>
 
 <template>
@@ -168,20 +185,12 @@ defineProps({
                                 Danger Zone
                             </h2>
                             <div class="card-actions">
-                                <Link
-                                    :href="route('sites.destroy', site.id)"
-                                    method="delete"
-                                    as="button"
+                                <button
+                                    @click="deleteSite"
                                     class="btn btn-sm btn-error btn-outline w-full"
-                                    :onBefore="
-                                        () =>
-                                            confirm(
-                                                'Are you sure you want to delete this site? This action cannot be undone.',
-                                            )
-                                    "
                                 >
                                     Delete Site
-                                </Link>
+                                </button>
                             </div>
                         </div>
                     </div>

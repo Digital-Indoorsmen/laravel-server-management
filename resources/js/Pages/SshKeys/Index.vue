@@ -2,6 +2,7 @@
 import { ref } from "vue";
 import { useForm } from "@inertiajs/vue3";
 import AppLayout from "@/Layouts/AppLayout.vue";
+import { useConfirmation } from "@/Stores/useConfirmation";
 import {
     KeyIcon,
     TrashIcon,
@@ -40,8 +41,18 @@ const importKey = () => {
     });
 };
 
-const deleteKey = (id) => {
-    if (confirm("Are you sure you want to delete this SSH key?")) {
+const confirmation = useConfirmation();
+
+const deleteKey = async (id) => {
+    const confirmed = await confirmation.ask({
+        title: "Delete SSH Key",
+        message:
+            "Are you sure you want to delete this SSH key? This action cannot be undone.",
+        confirmLabel: "Delete",
+        type: "error",
+    });
+
+    if (confirmed) {
         useForm({}).delete(route("ssh-keys.destroy", { sshKey: id }), {
             preserveScroll: true,
         });

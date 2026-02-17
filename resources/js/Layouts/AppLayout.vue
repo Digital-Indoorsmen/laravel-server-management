@@ -2,7 +2,10 @@
 import { ref } from "vue";
 import Sidebar from "@/Components/Sidebar.vue";
 import Navbar from "@/Components/Navbar.vue";
+import ConfirmationModal from "@/Components/UI/ConfirmationModal.vue";
+import { useConfirmation } from "@/Stores/useConfirmation";
 
+const { state: confirmState } = useConfirmation();
 const drawerOpen = ref(true);
 </script>
 
@@ -55,21 +58,17 @@ const drawerOpen = ref(true);
                 <Sidebar />
             </div>
         </div>
+
+        <ConfirmationModal
+            :show="confirmState.show"
+            :title="confirmState.title"
+            :message="confirmState.message"
+            :confirm-label="confirmState.confirmLabel"
+            :cancel-label="confirmState.cancelLabel"
+            :type="confirmState.type"
+            @confirm="confirmState.onConfirm"
+            @cancel="confirmState.onCancel"
+            @close="confirmState.show = false"
+        />
     </div>
 </template>
-
-<style>
-/* Custom transitions for sidebar */
-.is-drawer-close\:w-16 {
-    width: 4rem;
-}
-.is-drawer-open\:w-64 {
-    width: 16rem;
-}
-
-/* Enhanced Glassmorphism effect */
-.backdrop-blur-md {
-    backdrop-filter: blur(12px);
-    -webkit-backdrop-filter: blur(12px);
-}
-</style>
