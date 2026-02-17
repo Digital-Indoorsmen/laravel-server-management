@@ -16,12 +16,19 @@ class ServerConnectionService
     public function testConnection(Server $server): array
     {
         try {
-            $ssh = $this->getSshConnection($server);
+            if ($this->isLocalServer($server)) {
+                $os = $this->runLocalCommand("cat /etc/os-release | grep 'PRETTY_NAME' | cut -d'\"' -f2");
+                $ram = $this->runLocalCommand("free -m | awk '/Mem:/ { print $2 }'");
+                $cpu = $this->runLocalCommand('nproc');
+                $uptime = $this->runLocalCommand('uptime -p');
+            } else {
+                $ssh = $this->getSshConnection($server);
 
-            $os = $ssh->exec("cat /etc/os-release | grep 'PRETTY_NAME' | cut -d'\"' -f2");
-            $ram = $ssh->exec("free -m | awk '/Mem:/ { print $2 }'");
-            $cpu = $ssh->exec('nproc');
-            $uptime = $ssh->exec('uptime -p');
+                $os = $ssh->exec("cat /etc/os-release | grep 'PRETTY_NAME' | cut -d'\"' -f2");
+                $ram = $ssh->exec("free -m | awk '/Mem:/ { print $2 }'");
+                $cpu = $ssh->exec('nproc');
+                $uptime = $ssh->exec('uptime -p');
+            }
 
             $metadata = [
                 'os_version' => trim($os),
@@ -58,9 +65,39 @@ class ServerConnectionService
      */
     public function runCommand(Server $server, string $command): string
     {
+        if ($this->isLocalServer($server)) {
+            return $this->runLocalCommand($command);
+        }
+
         $ssh = $this->getSshConnection($server);
 
         return $ssh->exec($command);
+    }
+
+    /**
+     * Check if the server is the local host.
+     */
+    protected function isLocalServer(Server $server): bool
+    {
+        return $server->ip_address === '127.0.0.1' || $server->ip_address === 'localhost';
+    }
+
+    /**
+     * Run a command locally on the panel host.
+     */
+    protected function runLocalCommand(string $command): string
+    {
+        // We use proc_open or shell_exec for local commands.
+        // Since we need to capture output and handle potentially long running scripts,
+        // we'll use a simple shell_exec for now, but in a production environment
+        // we might want something more robust like Symfony Process.
+        $output = shell_exec($command . ' 2>&1');
+        
+        if ($output === null) {
+            throw new \Exception("Local command execution failed: {$command}");
+        }
+
+        return $output;
     }
 
     /**
