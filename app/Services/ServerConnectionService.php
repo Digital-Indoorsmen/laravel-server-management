@@ -91,8 +91,8 @@ class ServerConnectionService
         // Since we need to capture output and handle potentially long running scripts,
         // we'll use a simple shell_exec for now, but in a production environment
         // we might want something more robust like Symfony Process.
-        $output = shell_exec($command . ' 2>&1');
-        
+        $output = shell_exec($command.' 2>&1');
+
         if ($output === null) {
             throw new \Exception("Local command execution failed: {$command}");
         }
