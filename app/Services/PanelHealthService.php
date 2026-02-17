@@ -253,6 +253,26 @@ class PanelHealthService
         $version = preg_replace('/\s+/', ' ', trim($version ?? '')) ?: null;
 
         $activeState = $this->runCommand("systemctl is-active {$systemdUnit}");
+
+        // Handle RHEL/Rocky versioned PHP-FPM service names (e.g. php84-php-fpm)
+        if ($key === 'php-fpm' && ($activeState === null || $activeState === 'unknown')) {
+            $versionedUnit = $this->runCommand("systemctl list-units --type=service --all | grep -oE 'php[0-9]+-php-fpm' | head -n 1");
+            if ($versionedUnit) {
+                $systemdUnit = $versionedUnit;
+                $activeState = $this->runCommand("systemctl is-active {$systemdUnit}");
+            }
+        }
+
+        // Handle MySQL/MariaDB interchangeable service names
+        if (($key === 'mariadb' || $key === 'mysql') && ($activeState === null || $activeState === 'unknown')) {
+            $altUnit = $key === 'mariadb' ? 'mysqld' : 'mariadb';
+            $altState = $this->runCommand("systemctl is-active {$altUnit}");
+            if ($altState && $altState !== 'unknown') {
+                $systemdUnit = $altUnit;
+                $activeState = $altState;
+            }
+        }
+
         $status = match ($activeState) {
             'active' => 'running',
             'failed' => 'failed',
@@ -260,13 +280,19 @@ class PanelHealthService
             default => 'starting',
         };
 
-        if ($activeState === null) {
+        if ($activeState === null || $activeState === 'unknown') {
             $status = 'stopped';
         }
 
         // Fall back to process checks when systemctl output is unavailable or unreliable.
-        if ($status !== 'running' && in_array($systemdUnit, ['caddy', 'nginx', 'php-fpm'], true)) {
-            $processName = $systemdUnit === 'php-fpm' ? 'php-fpm' : $systemdUnit;
+        if ($status !== 'running' && in_array($key, ['caddy', 'nginx', 'php-fpm', 'mariadb', 'mysql'], true)) {
+            $processName = match ($key) {
+                'php-fpm' => 'php-fpm',
+                'mariadb' => 'mariadbd',
+                'mysql' => 'mysqld',
+                default => $key
+            };
+
             $hasProcess = $this->runCommand("pgrep -x {$processName}");
 
             if ($hasProcess !== null) {
@@ -274,7 +300,7 @@ class PanelHealthService
             }
         }
 
-        if ($version === null) {
+        if ($version === null && $status === 'stopped') {
             $status = 'not-installed';
             $version = 'Not installed';
         }
@@ -283,7 +309,7 @@ class PanelHealthService
             'key' => $key,
             'name' => $name,
             'status' => $status,
-            'version' => $version,
+            'version' => $version ?? 'Unknown',
         ];
     }
 
