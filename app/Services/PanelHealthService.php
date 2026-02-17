@@ -69,32 +69,43 @@ class PanelHealthService
                     $type = 'php';
                 }
 
-                // Extract version number
-                preg_match('/([0-9]+\.[0-9]+(\.[0-9]+)?)/', $svc['version'], $matches);
-                $version = $matches[1] ?? null;
+                // Extract version number with improved logic for MariaDB
+                $version = $this->extractVersion($svc['version'], $type);
 
                 // Skip if we couldn't extract a valid version
                 if (! $version) {
                     continue;
                 }
 
-                if (! isset($software[$type][$version])) {
-                    $software[$type][$version] = [
-                        'status' => 'active',
-                        'installed_at' => now()->toDateTimeString(),
-                        'method' => 'discovery',
+                // For databases (mariadb, mysql, postgresql), only store ONE version
+                if (in_array($type, ['mariadb', 'mysql', 'postgresql'])) {
+                    // Replace any existing versions with the current one
+                    $software[$type] = [
+                        $version => [
+                            'status' => 'active',
+                            'installed_at' => $software[$type][$version]['installed_at'] ?? now()->toDateTimeString(),
+                            'method' => 'discovery',
+                        ],
                     ];
                     $changed = true;
-                }
 
-                if (in_array($type, ['mariadb', 'mysql', 'postgresql']) && ! isset($engines[$type])) {
+                    // Update legacy database_engines structure
                     $engines[$type] = [
                         'status' => 'active',
                         'version' => $version,
-                        'installed_at' => now()->toDateTimeString(),
+                        'installed_at' => $engines[$type]['installed_at'] ?? now()->toDateTimeString(),
                         'method' => 'discovery',
                     ];
-                    $changed = true;
+                } else {
+                    // For PHP and other software, allow multiple versions
+                    if (! isset($software[$type][$version])) {
+                        $software[$type][$version] = [
+                            'status' => 'active',
+                            'installed_at' => now()->toDateTimeString(),
+                            'method' => 'discovery',
+                        ];
+                        $changed = true;
+                    }
                 }
             }
         }
@@ -415,5 +426,29 @@ class PanelHealthService
         $trimmed = trim($output);
 
         return $trimmed === '' ? null : $trimmed;
+    }
+
+    /**
+     * Extract version number from version string with special handling for MariaDB.
+     *
+     * MariaDB output looks like: "mariadb from 10.11.15-MariaDB, client 15.2..."
+     * We want to extract "10.11" not "15.2"
+     */
+    private function extractVersion(string $versionString, string $type): ?string
+    {
+        // Special handling for MariaDB - look for the version before "MariaDB" keyword
+        if ($type === 'mariadb' || str_contains(strtolower($versionString), 'mariadb')) {
+            // Match pattern like "10.11.15-MariaDB" or "from 10.5.29-MariaDB"
+            if (preg_match('/(\d+\.\d+)(?:\.\d+)?-MariaDB/i', $versionString, $matches)) {
+                return $matches[1]; // Returns "10.11" or "10.5"
+            }
+        }
+
+        // For all other software, extract first version number found
+        if (preg_match('/(\d+\.\d+)(?:\.\d+)?/', $versionString, $matches)) {
+            return $matches[1];
+        }
+
+        return null;
     }
 }
