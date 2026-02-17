@@ -67,6 +67,14 @@ const upgrade = async (type) => {
     }
 };
 
+const syncForm = useForm({});
+
+const refreshStatus = () => {
+    syncForm.post(route("servers.software.sync", props.server.id), {
+        preserveScroll: true,
+    });
+};
+
 const getStatusBadgeClass = (status) => {
     return {
         "badge-success": status === "active",
