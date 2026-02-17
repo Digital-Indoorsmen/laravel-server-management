@@ -226,6 +226,13 @@ EOT;
         $this->connection->runCommand($site->server, "sudo chown {$site->system_user}:{$site->system_user} {$path}");
         $this->connection->runCommand($site->server, "sudo chmod 600 {$path}");
 
+        // For Laravel apps, symlink .env into public_html if it's not already there
+        if ($site->app_type === 'laravel') {
+            $publicHtmlEnv = "/home/{$site->system_user}/public_html/.env";
+            $cmd = "test -L {$publicHtmlEnv} || ln -s {$path} {$publicHtmlEnv}";
+            $this->connection->runCommand($site->server, "sudo -u {$site->system_user} bash -c '{$cmd}'");
+        }
+
         $this->reloadServices($site);
     }
 }

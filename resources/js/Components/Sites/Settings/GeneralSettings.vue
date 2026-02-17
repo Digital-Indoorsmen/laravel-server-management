@@ -178,6 +178,9 @@ const submit = () => {
                     <p class="text-sm text-base-content/60">
                         Update the Git repository and branch associated with this site.
                     </p>
+                    <div class="mt-2 text-xs font-mono text-base-content/50 bg-base-200 p-2 rounded">
+                        Repository will be cloned directly into: /home/{{ site.system_user }}/public_html/
+                    </div>
                 </div>
 
                 <div class="grid gap-6 md:grid-cols-2">

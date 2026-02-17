@@ -120,3 +120,22 @@ it('triggers a deployment via webhook', function () {
 
     \Illuminate\Support\Facades\Bus::assertDispatched(\App\Jobs\RunSiteDeployment::class);
 });
+
+it('creates .env symlink for laravel sites', function () {
+    $this->site->update(['app_type' => 'laravel']);
+
+    $mockConnection = $this->mock(\App\Services\ServerConnectionService::class);
+
+    // Assert that the symlink command is called
+    $mockConnection->shouldReceive('runCommand')
+        ->with(\Mockery::on(fn ($server) => $server->id === $this->server->id), \Mockery::on(fn ($cmd) => str_contains($cmd, 'ln -s')))
+        ->once()
+        ->andReturn('OK');
+
+    // Allow other setup commands
+    $mockConnection->shouldReceive('runCommand')
+        ->zeroOrMoreTimes();
+
+    $service = app(\App\Services\SiteProvisioningService::class);
+    $service->updateEnvContent($this->site, 'TEST=CONTENT');
+});
