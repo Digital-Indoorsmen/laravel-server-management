@@ -43,7 +43,7 @@ const navigation = computed(() => [
         name: "Software",
         href: route("software.index"),
         icon: CpuChipIcon,
-        startsWith: "/servers",
+        startsWith: "/software",
     },
     {
         name: "SSH Keys",

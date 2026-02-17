@@ -2,10 +2,10 @@
 
 namespace App\Http\Controllers;
 
+use App\Http\Requests\StoreSiteRequest;
 use App\Models\Server;
 use App\Models\Site;
 use App\Services\SiteProvisioningService;
-use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
 use Inertia\Inertia;
@@ -40,17 +40,9 @@ class SiteController extends Controller
     /**
      * Store a newly created resource in storage.
      */
-    public function store(Request $request, Server $server)
+    public function store(StoreSiteRequest $request, Server $server)
     {
-        $validated = $request->validate([
-            'domain' => ['required', 'string', 'max:255', 'unique:sites,domain'],
-            'system_user' => ['required', 'string', 'max:32', 'alpha_dash', 'unique:sites,system_user'],
-            'php_version' => ['required', 'string', 'in:7.4,8.1,8.2,8.3,8.4,8.5'],
-            'app_type' => ['required', 'string', 'in:wordpress,laravel,generic'],
-            'web_server' => ['nullable', 'string', 'in:nginx,caddy'],
-            'create_database' => ['boolean'],
-            'database_type' => ['required_if:create_database,true', 'string', 'in:mariadb,postgresql'],
-        ]);
+        $validated = $request->validated();
 
         // Default document root based on app type
         $documentRoot = "/home/{$validated['system_user']}/public_html";
