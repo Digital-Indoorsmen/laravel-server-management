@@ -194,11 +194,18 @@ sudo dnf install -y mariadb-server mariadb
 sudo systemctl enable --now mariadb
 
 echo "Securing MariaDB..."
-# Set root password
-sudo mysql -e "ALTER USER 'root'@'localhost' IDENTIFIED BY '{$escapedPassword}'; FLUSH PRIVILEGES;"
-
-# Remove anonymous users and test database
-sudo mysql -u root -p'{$escapedPassword}' -e "DELETE FROM mysql.user WHERE User=''; DELETE FROM mysql.db WHERE Db='test' OR Db='test_%'; FLUSH PRIVILEGES;"
+# Check if root password is already set
+if sudo mysql -e "SELECT 1;" &>/dev/null; then
+    echo "Root access is open, setting password..."
+    sudo mysql -e "ALTER USER 'root'@'localhost' IDENTIFIED BY '{$escapedPassword}'; FLUSH PRIVILEGES;"
+    
+    # Remove anonymous users and test database
+    sudo mysql -u root -p'{$escapedPassword}' -e "DELETE FROM mysql.user WHERE User=''; DELETE FROM mysql.db WHERE Db='test' OR Db='test_%'; FLUSH PRIVILEGES;"
+    echo "MariaDB secured successfully."
+else
+    echo "MariaDB root access is already secured. Skipping password configuration."
+    echo "Note: If you need to reset the root password, you'll need to do so manually."
+fi
 
 echo "MariaDB installation complete."
 BASH;
@@ -219,11 +226,18 @@ sudo dnf install -y mysql-server mysql
 sudo systemctl enable --now mysqld
 
 echo "Securing MySQL..."
-# Set root password
-sudo mysql -e "ALTER USER 'root'@'localhost' IDENTIFIED BY '{$escapedPassword}'; FLUSH PRIVILEGES;"
-
-# Remove anonymous users and test database
-sudo mysql -u root -p'{$escapedPassword}' -e "DELETE FROM mysql.user WHERE User=''; DELETE FROM mysql.db WHERE Db='test' OR Db='test_%'; FLUSH PRIVILEGES;"
+# Check if root password is already set
+if sudo mysql -e "SELECT 1;" &>/dev/null; then
+    echo "Root access is open, setting password..."
+    sudo mysql -e "ALTER USER 'root'@'localhost' IDENTIFIED BY '{$escapedPassword}'; FLUSH PRIVILEGES;"
+    
+    # Remove anonymous users and test database
+    sudo mysql -u root -p'{$escapedPassword}' -e "DELETE FROM mysql.user WHERE User=''; DELETE FROM mysql.db WHERE Db='test' OR Db='test_%'; FLUSH PRIVILEGES;"
+    echo "MySQL secured successfully."
+else
+    echo "MySQL root access is already secured. Skipping password configuration."
+    echo "Note: If you need to reset the root password, you'll need to do so manually."
+fi
 
 echo "MySQL installation complete."
 BASH;

@@ -71,7 +71,12 @@ class PanelHealthService
 
                 // Extract version number
                 preg_match('/([0-9]+\.[0-9]+(\.[0-9]+)?)/', $svc['version'], $matches);
-                $version = $matches[1] ?? 'unknown';
+                $version = $matches[1] ?? null;
+
+                // Skip if we couldn't extract a valid version
+                if (! $version) {
+                    continue;
+                }
 
                 if (! isset($software[$type][$version])) {
                     $software[$type][$version] = [
