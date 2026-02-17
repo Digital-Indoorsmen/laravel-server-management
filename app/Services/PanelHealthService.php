@@ -2,14 +2,16 @@
 
 namespace App\Services;
 
+use App\Models\Server;
+
 class PanelHealthService
 {
     /**
      * @return array<int, array{name: string, value: int, unit: string}>
      */
-    public function systemStats(): array
+    public function systemStats(?Server $server = null): array
     {
-        $this->syncLocalServerState();
+        $this->syncLocalServerState($server);
 
         $stats = [
             [
@@ -46,9 +48,9 @@ class PanelHealthService
         return $stats;
     }
 
-    private function syncLocalServerState(): void
+    private function syncLocalServerState(?Server $server = null): void
     {
-        $server = \App\Models\Server::query()->first();
+        $server = $server ?? \App\Models\Server::query()->first();
         if (! $server || ($server->ip_address !== '127.0.0.1' && $server->ip_address !== 'localhost')) {
             return;
         }

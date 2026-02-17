@@ -24,7 +24,7 @@ it('shows available commands when run without arguments', function () {
 it('shows status output successfully', function () {
     $service = new class extends PanelHealthService
     {
-        public function systemStats(): array
+        public function systemStats(?Server $server = null): array
         {
             return [
                 ['name' => 'CPU Load', 'value' => 10, 'unit' => '%'],

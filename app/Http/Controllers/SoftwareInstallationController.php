@@ -13,7 +13,7 @@ class SoftwareInstallationController extends Controller
 {
     public function index(Server $server, PanelHealthService $panelHealth)
     {
-        $panelHealth->systemStats();
+        $panelHealth->systemStats($server);
         $server->refresh();
 
         $installedSoftware = $server->software ?? [];
