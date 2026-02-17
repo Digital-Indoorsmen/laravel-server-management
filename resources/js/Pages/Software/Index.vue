@@ -6,7 +6,6 @@ import {
     PlayIcon,
     ArrowUpCircleIcon,
     CheckCircleIcon,
-    CpuChipIcon,
 } from "@heroicons/vue/24/outline";
 
 import { onMounted, ref } from "vue";
@@ -53,10 +52,11 @@ const install = async (type) => {
 };
 
 const upgrade = async (type) => {
+    const version = selectedVersions.value[type];
     const item = props.availableSoftware.find((s) => s.id === type);
     const confirmed = await confirmation.ask({
         title: `Upgrade ${item.name}`,
-        message: `Are you sure you want to upgrade ${item.name}? This will run system updates and restart the service.`,
+        message: `Are you sure you want to upgrade ${item.name} to v${version}?`,
         type: "warning",
     });
 
@@ -77,20 +77,41 @@ const getStatusBadgeClass = (status) => {
 </script>
 
 <template>
-    <Head title="Server Software" />
-
     <AppLayout>
-        <div class="space-y-6">
-            <div>
-                <h1
-                    class="text-2xl font-bold text-base-content flex items-center gap-2"
+        <Head :title="`Software - ${server.name}`" />
+
+        <div class="mx-auto max-w-7xl px-4 py-6 sm:px-6 lg:px-8">
+            <!-- Header -->
+            <div class="mb-6 flex items-center justify-between">
+                <div>
+                    <h1 class="text-3xl font-bold">Server Software</h1>
+                    <p class="mt-1 text-sm text-base-content/70">
+                        Manage system software and runtimes on
+                        {{ server.name }}.
+                    </p>
+                </div>
+                <button
+                    @click="refreshStatus"
+                    :disabled="syncForm.processing"
+                    class="btn btn-outline btn-sm gap-2"
                 >
-                    <CpuChipIcon class="h-8 w-8 text-primary" />
-                    Server Software
-                </h1>
-                <p class="text-base-content/60">
-                    Manage system software and runtimes on {{ server.name }}.
-                </p>
+                    <svg
+                        xmlns="http://www.w3.org/2000/svg"
+                        fill="none"
+                        viewBox="0 0 24 24"
+                        stroke-width="1.5"
+                        stroke="currentColor"
+                        class="h-4 w-4"
+                        :class="{ 'animate-spin': syncForm.processing }"
+                    >
+                        <path
+                            stroke-linecap="round"
+                            stroke-linejoin="round"
+                            d="M16.023 9.348h4.992v-.001M2.985 19.644v-4.992m0 0h4.992m-4.993 0l3.181 3.183a8.25 8.25 0 0013.803-3.7M4.031 9.865a8.25 8.25 0 0113.803-3.7l3.181 3.182m0-4.991v4.99"
+                        />
+                    </svg>
+                    {{ syncForm.processing ? 'Refreshing...' : 'Refresh Status' }}
+                </button>
             </div>
 
             <div class="grid grid-cols-1 md:grid-cols-2 gap-6">

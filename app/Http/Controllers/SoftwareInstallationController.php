@@ -127,7 +127,21 @@ class SoftwareInstallationController extends Controller
 
         $verb = $action === 'upgrade' ? 'Upgrade' : 'Installation';
 
-        return back()->with('success', "{$verb} of {$validated['type']} queued.");
+        return back()->with('success', 'Software installation queued successfully');
+    }
+
+    public function sync(Server $server, PanelHealthService $panelHealth)
+    {
+        // Clear existing software data to force fresh sync
+        $server->update([
+            'software' => [],
+            'database_engines' => [],
+        ]);
+
+        // Trigger resync
+        $panelHealth->systemStats($server);
+
+        return back()->with('success', 'Software status refreshed successfully');
     }
 
     public function show(SoftwareInstallation $installation)

@@ -51,6 +51,7 @@ Route::middleware('auth')->group(function (): void {
     Route::patch('/servers/{server}/web-server', [App\Http\Controllers\ServerController::class, 'updateWebServer'])->name('servers.web-server.update');
 
     Route::get('/servers/{server}/software', [App\Http\Controllers\SoftwareInstallationController::class, 'index'])->name('servers.software.index');
+    Route::post('/servers/{server}/software/sync', [App\Http\Controllers\SoftwareInstallationController::class, 'sync'])->name('servers.software.sync');
     Route::post('/servers/{server}/software', [App\Http\Controllers\SoftwareInstallationController::class, 'store'])->name('servers.software.store');
     Route::get('/software-installations/{installation}', [App\Http\Controllers\SoftwareInstallationController::class, 'show'])->name('software-installations.show');
 
