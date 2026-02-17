@@ -86,16 +86,16 @@ const getStatusBadgeClass = (status) => {
 
 <template>
     <AppLayout>
-        <Head :title="`Software - ${server.name}`" />
+        <Head title="Local Server Software" />
 
-        <div class="mx-auto max-w-7xl px-4 py-6 sm:px-6 lg:px-8">
+        <div class="mx-auto max-w-7xl px-4 py-6 sm:px-6 lg:px-8 space-y-8">
             <!-- Header -->
-            <div class="mb-6 flex items-center justify-between">
+            <div class="flex items-center justify-between">
                 <div>
-                    <h1 class="text-3xl font-bold">Server Software</h1>
+                    <h1 class="text-3xl font-bold">Local Server Software</h1>
                     <p class="mt-1 text-sm text-base-content/70">
-                        Manage system software and runtimes on
-                        {{ server.name }}.
+                        Manage system software and runtimes installed on this
+                        server.
                     </p>
                 </div>
                 <button
@@ -124,14 +124,15 @@ const getStatusBadgeClass = (status) => {
                 </button>
             </div>
 
-            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <!-- Software Grid -->
+            <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
                 <div
                     v-for="item in availableSoftware"
                     :key="item.id"
                     class="card bg-base-100 border border-base-300 shadow-sm"
                 >
                     <div class="card-body">
-                        <div class="flex items-center justify-between">
+                        <div class="flex items-center justify-between mb-3">
                             <h2 class="card-title">{{ item.name }}</h2>
                             <div class="flex gap-1 flex-wrap justify-end">
                                 <template
@@ -146,13 +147,30 @@ const getStatusBadgeClass = (status) => {
                                         v{{ v }}
                                     </span>
                                 </template>
-                                <span v-else class="badge badge-soft"
+                                <span v-else class="badge badge-ghost"
                                     >Not Installed</span
                                 >
                             </div>
                         </div>
 
-                        <div class="form-control w-full max-w-xs mt-2">
+                        <p class="text-sm text-base-content/70 mb-4">
+                            <template
+                                v-if="
+                                    item.multiVersion &&
+                                    item.installed_versions.length > 0
+                                "
+                            >
+                                Multiple versions can be installed
+                                simultaneously. Sites can use different
+                                versions.
+                            </template>
+                            <template v-else>
+                                Manage and provision {{ item.name }} on this
+                                server.
+                            </template>
+                        </p>
+
+                        <div class="form-control w-full">
                             <label class="label py-1">
                                 <span class="label-text-alt"
                                     >Version to Install</span
@@ -180,34 +198,17 @@ const getStatusBadgeClass = (status) => {
                             </select>
                         </div>
 
-                        <p class="text-sm opacity-70 py-2">
-                            <template
-                                v-if="
-                                    item.multiVersion &&
-                                    item.installed_versions.length > 0
-                                "
-                            >
-                                Multiple versions can be installed
-                                simultaneously. Sites can use different
-                                versions.
-                            </template>
-                            <template v-else>
-                                Manage and provision {{ item.name }} on this
-                                server.
-                            </template>
-                        </p>
-
                         <div class="card-actions justify-end mt-4">
                             <button
                                 @click="install(item.id)"
-                                class="btn btn-primary btn-sm"
+                                class="btn btn-primary btn-sm gap-1"
                                 :disabled="form.processing"
                             >
                                 <PlayIcon class="h-4 w-4" />
                                 {{
                                     item.multiVersion &&
                                     item.installed_versions.length > 0
-                                        ? "Install Additional Version"
+                                        ? "Install Additional"
                                         : "Install"
                                 }}
                             </button>
@@ -215,10 +216,10 @@ const getStatusBadgeClass = (status) => {
                             <button
                                 v-if="item.upgradeAvailable"
                                 @click="upgrade(item.id)"
-                                class="btn btn-outline btn-xs gap-1"
+                                class="btn btn-outline btn-sm gap-1"
                                 :disabled="form.processing"
                             >
-                                <ArrowUpCircleIcon class="h-3.5 w-3.5" />
+                                <ArrowUpCircleIcon class="h-4 w-4" />
                                 Upgrade
                             </button>
                         </div>
@@ -226,6 +227,7 @@ const getStatusBadgeClass = (status) => {
                 </div>
             </div>
 
+            <!-- Installation History -->
             <div class="space-y-4">
                 <h2 class="text-xl font-bold flex items-center gap-2">
                     <CommandLineIcon class="h-6 w-6" />
