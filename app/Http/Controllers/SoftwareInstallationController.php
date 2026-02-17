@@ -22,26 +22,50 @@ class SoftwareInstallationController extends Controller
             [
                 'id' => 'php',
                 'name' => 'PHP',
-                'versions' => ['7.4', '8.1', '8.2', '8.3', '8.4', '8.5'],
-                'latest' => '8.5',
+                'versions' => ['7.4', '8.0', '8.1', '8.2', '8.3', '8.4', '8.5'],
+                'latest' => '8.4',
+                'multiVersion' => true, // Multiple versions can coexist
+                'versionNotes' => [
+                    '8.5' => 'Development (not recommended for production)',
+                    '8.4' => 'Latest stable',
+                    '8.3' => 'Stable',
+                    '8.2' => 'Stable',
+                    '8.1' => 'Stable',
+                    '8.0' => 'Legacy',
+                    '7.4' => 'Legacy (EOL Nov 2022)',
+                ],
             ],
             [
                 'id' => 'mariadb',
                 'name' => 'MariaDB',
-                'versions' => ['10.3', '10.5', '10.11'],
+                'versions' => ['10.5', '10.11'],
                 'latest' => '10.11',
+                'versionNotes' => [
+                    '10.11' => 'LTS (supported until Feb 2028)',
+                    '10.5' => 'Legacy (EOL June 2025)',
+                ],
             ],
             [
                 'id' => 'mysql',
                 'name' => 'MySQL',
                 'versions' => ['8.0', '8.4'],
                 'latest' => '8.4',
+                'versionNotes' => [
+                    '8.4' => 'Latest LTS',
+                    '8.0' => 'Stable',
+                ],
             ],
             [
                 'id' => 'postgresql',
                 'name' => 'PostgreSQL',
-                'versions' => ['13', '15', '16'],
-                'latest' => '16',
+                'versions' => ['13', '15', '16', '17'],
+                'latest' => '17',
+                'versionNotes' => [
+                    '17' => 'Latest stable',
+                    '16' => 'Stable',
+                    '15' => 'Stable',
+                    '13' => 'Legacy',
+                ],
             ],
         ];
 

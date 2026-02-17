@@ -137,12 +137,20 @@ const getStatusBadgeClass = (status) => {
                                     :value="v"
                                 >
                                     {{ item.name }} {{ v }}
+                                    <template v-if="item.versionNotes && item.versionNotes[v]">
+                                        - {{ item.versionNotes[v] }}
+                                    </template>
                                 </option>
                             </select>
                         </div>
 
                         <p class="text-sm opacity-70 py-2">
-                            Manage and provision {{ item.name }} on this server.
+                            <template v-if="item.multiVersion && item.installed_versions.length > 0">
+                                Multiple versions can be installed simultaneously. Sites can use different versions.
+                            </template>
+                            <template v-else>
+                                Manage and provision {{ item.name }} on this server.
+                            </template>
                         </p>
 
                         <div class="card-actions justify-end mt-4">
@@ -152,7 +160,9 @@ const getStatusBadgeClass = (status) => {
                                 :disabled="form.processing"
                             >
                                 <PlayIcon class="h-4 w-4" />
-                                Install
+                                {{ item.multiVersion && item.installed_versions.length > 0 
+                                    ? 'Install Additional Version' 
+                                    : 'Install' }}
                             </button>
 
                             <button

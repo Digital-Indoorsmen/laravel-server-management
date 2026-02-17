@@ -141,8 +141,8 @@ class SoftwareProvisioningService
     {
         return match ($type) {
             'mariadb' => '10.11',
-            'mysql' => '8.0',
-            'postgresql' => '16',
+            'mysql' => '8.4',
+            'postgresql' => '17',
             'php' => '8.4',
             default => 'latest',
         };
