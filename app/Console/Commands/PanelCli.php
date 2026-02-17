@@ -212,16 +212,80 @@ class PanelCli extends Command
             return $server;
         }
 
-        $this->components->info('No servers found. Creating a local server record...');
+        $this->components->info('No servers found. Creating a local server record with auto-discovery...');
+
+        $discovered = $this->discoverLocalSoftware();
 
         return Server::query()->create([
             'name' => 'Local Server',
             'ip_address' => '127.0.0.1',
             'hostname' => gethostname() ?: 'localhost',
-            'os_version' => 'rocky_9', // Defaulting to current target OS
+            'os_version' => $discovered['os'],
             'status' => 'active',
-            'web_server' => 'nginx',
+            'web_server' => $discovered['web_server'],
+            'software' => $discovered['software'],
+            'database_engines' => $discovered['database_engines'],
         ]);
+    }
+
+    protected function discoverLocalSoftware(): array
+    {
+        $software = [];
+        $dbEngines = [];
+
+        // 1. Detect Web Server
+        $webServer = 'nginx';
+        if (shell_exec('systemctl is-active caddy 2>/dev/null') === "active\n") {
+            $webServer = 'caddy';
+        }
+
+        // 2. Detect PHP Versions (RHEL/Rocky specific)
+        $phpUnits = shell_exec("systemctl list-units --type=service --all | grep -oE 'php[0-9]+-php-fpm' | sort -u") ?? '';
+        $versions = array_filter(explode("\n", trim($phpUnits)));
+        foreach ($versions as $unit) {
+            if (preg_match('/php([0-9])([0-9])-php-fpm/', $unit, $matches)) {
+                $v = "{$matches[1]}.{$matches[2]}";
+                $software['php'][$v] = [
+                    'status' => 'active',
+                    'installed_at' => now()->toDateTimeString(),
+                    'method' => 'discovery',
+                ];
+            }
+        }
+
+        // 3. Detect Database Engines
+        $engines = [
+            'mariadb' => 'mariadb',
+            'mysql' => 'mysqld',
+            'postgresql' => 'postgresql',
+        ];
+
+        foreach ($engines as $type => $unit) {
+            $isActive = shell_exec("systemctl is-active {$unit} 2>/dev/null") === "active\n";
+            if ($isActive) {
+                $versionOutput = shell_exec("{$type} --version 2>&1") ?? '';
+                preg_match('/([0-9]+\.[0-9]+(\.[0-9]+)?)/', $versionOutput, $vMatches);
+                $v = $vMatches[1] ?? 'unknown';
+
+                $dbEngines[$type] = [
+                    'status' => 'active',
+                    'version' => $v,
+                    'installed_at' => now()->toDateTimeString(),
+                    'method' => 'discovery',
+                ];
+                $software[$type][$v] = $dbEngines[$type];
+            }
+        }
+
+        // 4. OS Version
+        $os = shell_exec("cat /etc/os-release | grep 'PRETTY_NAME' | cut -d'\"' -f2") ?? 'rocky_9';
+
+        return [
+            'os' => trim($os),
+            'web_server' => $webServer,
+            'software' => $software,
+            'database_engines' => $dbEngines,
+        ];
     }
 
     protected function runStatus(): int

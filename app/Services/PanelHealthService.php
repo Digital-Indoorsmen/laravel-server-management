@@ -9,6 +9,8 @@ class PanelHealthService
      */
     public function systemStats(): array
     {
+        $this->syncLocalServerState();
+
         $stats = [
             [
                 'name' => 'CPU Load',
@@ -44,6 +46,74 @@ class PanelHealthService
         return $stats;
     }
 
+    private function syncLocalServerState(): void
+    {
+        $server = \App\Models\Server::query()->first();
+        if (! $server || ($server->ip_address !== '127.0.0.1' && $server->ip_address !== 'localhost')) {
+            return;
+        }
+
+        $services = $this->services();
+        $software = $server->software ?? [];
+        $engines = $server->database_engines ?? [];
+        $changed = false;
+
+        foreach ($services as $svc) {
+            if ($svc['status'] === 'running') {
+                $type = $svc['key'];
+
+                // Special handling for php-fpm to generic php key
+                if ($type === 'php-fpm') {
+                    $type = 'php';
+                }
+
+                // Extract version number
+                preg_match('/([0-9]+\.[0-9]+(\.[0-9]+)?)/', $svc['version'], $matches);
+                $version = $matches[1] ?? 'unknown';
+
+                if (! isset($software[$type][$version])) {
+                    $software[$type][$version] = [
+                        'status' => 'active',
+                        'installed_at' => now()->toDateTimeString(),
+                        'method' => 'discovery',
+                    ];
+                    $changed = true;
+                }
+
+                if (in_array($type, ['mariadb', 'mysql', 'postgresql']) && ! isset($engines[$type])) {
+                    $engines[$type] = [
+                        'status' => 'active',
+                        'version' => $version,
+                        'installed_at' => now()->toDateTimeString(),
+                        'method' => 'discovery',
+                    ];
+                    $changed = true;
+                }
+            }
+        }
+
+        // Sync web server preference if not set or different
+        $activeWebServer = null;
+        if (shell_exec('systemctl is-active caddy 2>/dev/null') === "active\n") {
+            $activeWebServer = 'caddy';
+        } elseif (shell_exec('systemctl is-active nginx 2>/dev/null') === "active\n") {
+            $activeWebServer = 'nginx';
+        }
+
+        if ($activeWebServer && $server->web_server !== $activeWebServer) {
+            $server->web_server = $activeWebServer;
+            $changed = true;
+        }
+
+        if ($changed) {
+            $server->update([
+                'software' => $software,
+                'database_engines' => $engines,
+                'web_server' => $server->web_server,
+            ]);
+        }
+    }
+
     /**
      * @return array<string, int>
      */
@@ -66,11 +136,26 @@ class PanelHealthService
             $this->serviceStatus('php-fpm', 'PHP-FPM', 'php-fpm', 'php-fpm -v | head -n 1'),
         ];
 
-        foreach (['mariadb' => 'MariaDB', 'mysql' => 'MySQL', 'postgresql' => 'PostgreSQL'] as $key => $name) {
-            $status = $this->serviceStatus($key, $name, $key, "{$key} --version 2>&1 | head -n 1");
-            if ($status['status'] !== 'not-installed') {
-                $services[] = $status;
+        $foundMariaDb = false;
+
+        $mariadb = $this->serviceStatus('mariadb', 'MariaDB', 'mariadb', 'mariadb --version 2>&1 | head -n 1');
+        if ($mariadb['status'] !== 'not-installed') {
+            $services[] = $mariadb;
+            $foundMariaDb = true;
+        }
+
+        $mysql = $this->serviceStatus('mysql', 'MySQL', 'mysqld', 'mysql --version 2>&1 | head -n 1');
+
+        if ($mysql['status'] !== 'not-installed') {
+            $isMariaDbSymlink = str_contains(strtolower($mysql['version']), 'mariadb');
+            if (! $isMariaDbSymlink || ! $foundMariaDb) {
+                $services[] = $mysql;
             }
+        }
+
+        $postgresql = $this->serviceStatus('postgresql', 'PostgreSQL', 'postgresql', 'psql --version 2>&1 | head -n 1');
+        if ($postgresql['status'] !== 'not-installed') {
+            $services[] = $postgresql;
         }
 
         $services[] = $this->serviceStatus('firewalld', 'Firewalld', 'firewalld', 'firewall-cmd --version');
@@ -290,7 +375,7 @@ class PanelHealthService
                 'php-fpm' => 'php-fpm',
                 'mariadb' => 'mariadbd',
                 'mysql' => 'mysqld',
-                default => $key
+                default => $key,
             };
 
             $hasProcess = $this->runCommand("pgrep -x {$processName}");

@@ -77,7 +77,10 @@ const getStatusBadgeClass = (status) => {
                 <div class="flex items-center gap-4">
                     <Link
                         :href="
-                            route('servers.software.index', installation.server_id)
+                            route(
+                                'servers.software.index',
+                                installation.server_id,
+                            )
                         "
                         class="btn btn-sm btn-ghost btn-circle"
                     >
@@ -130,7 +133,9 @@ const getStatusBadgeClass = (status) => {
                 >
                     <div class="flex items-center gap-2">
                         <div class="flex gap-1.5">
-                            <div class="w-2.5 h-2.5 rounded-full bg-error/50"></div>
+                            <div
+                                class="w-2.5 h-2.5 rounded-full bg-error/50"
+                            ></div>
                             <div
                                 class="w-2.5 h-2.5 rounded-full bg-warning/50"
                             ></div>
@@ -162,14 +167,23 @@ const getStatusBadgeClass = (status) => {
                 </div>
             </div>
 
-            <div v-if="installation.status === 'active'" class="alert alert-success">
+            <div
+                v-if="installation.status === 'active'"
+                class="alert alert-success"
+            >
                 <CheckCircleIcon class="h-6 w-6" />
                 <span>{{ installation.action }} completed successfully!</span>
             </div>
 
-            <div v-if="installation.status === 'error'" class="alert alert-error">
+            <div
+                v-if="installation.status === 'error'"
+                class="alert alert-error"
+            >
                 <XCircleIcon class="h-6 w-6" />
-                <span>{{ installation.action }} failed. Please review the logs above for details.</span>
+                <span
+                    >{{ installation.action }} failed. Please review the logs
+                    above for details.</span
+                >
             </div>
         </div>
     </AppLayout>

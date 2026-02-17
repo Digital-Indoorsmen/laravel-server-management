@@ -103,7 +103,9 @@ const getStatusBadgeClass = (status) => {
                         <div class="flex items-center justify-between">
                             <h2 class="card-title">{{ item.name }}</h2>
                             <div class="flex gap-1 flex-wrap justify-end">
-                                <template v-if="item.installed_versions.length > 0">
+                                <template
+                                    v-if="item.installed_versions.length > 0"
+                                >
                                     <span
                                         v-for="v in item.installed_versions"
                                         :key="v"
@@ -113,13 +115,17 @@ const getStatusBadgeClass = (status) => {
                                         v{{ v }}
                                     </span>
                                 </template>
-                                <span v-else class="badge badge-soft">Not Installed</span>
+                                <span v-else class="badge badge-soft"
+                                    >Not Installed</span
+                                >
                             </div>
                         </div>
 
                         <div class="form-control w-full max-w-xs mt-2">
                             <label class="label py-1">
-                                <span class="label-text-alt">Version to Install</span>
+                                <span class="label-text-alt"
+                                    >Version to Install</span
+                                >
                             </label>
                             <select
                                 v-model="selectedVersions[item.id]"
@@ -136,8 +142,7 @@ const getStatusBadgeClass = (status) => {
                         </div>
 
                         <p class="text-sm opacity-70 py-2">
-                            Manage and provision {{ item.name }} on
-                            this server.
+                            Manage and provision {{ item.name }} on this server.
                         </p>
 
                         <div class="card-actions justify-end mt-4">
@@ -149,8 +154,8 @@ const getStatusBadgeClass = (status) => {
                                 <PlayIcon class="h-4 w-4" />
                                 Install
                             </button>
-                            
-                            <button 
+
+                            <button
                                 v-if="item.upgradeAvailable"
                                 @click="upgrade(item.id)"
                                 class="btn btn-outline btn-xs gap-1"
