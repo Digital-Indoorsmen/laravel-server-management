@@ -63,28 +63,35 @@ const activeServers = computed(() => {
 
 const systemStatsWithMeta = computed(() => {
     return props.systemStats.map((stat) => {
-        const metadata =
-            {
-                "CPU Load": {
-                    icon: CpuChipIcon,
-                    color: "text-blue-500",
-                },
-                "RAM Usage": {
-                    icon: ViewColumnsIcon,
-                    color: "text-green-500",
-                },
-                "Disk Space": {
-                    icon: CircleStackIcon,
-                    color: "text-purple-500",
-                },
-                "Swap Usage": {
-                    icon: BoltIcon,
-                    color: "text-orange-500",
-                },
-            }[stat.name] || {
+        // Use pattern matching for stats that may have dynamic suffixes
+        let metadata;
+        
+        if (stat.name === "CPU Load") {
+            metadata = {
+                icon: CpuChipIcon,
+                color: "text-blue-500",
+            };
+        } else if (stat.name === "RAM Usage") {
+            metadata = {
+                icon: ViewColumnsIcon,
+                color: "text-green-500",
+            };
+        } else if (stat.name.startsWith("Disk Space")) {
+            metadata = {
+                icon: CircleStackIcon,
+                color: "text-purple-500",
+            };
+        } else if (stat.name === "Swap Usage") {
+            metadata = {
+                icon: BoltIcon,
+                color: "text-orange-500",
+            };
+        } else {
+            metadata = {
                 icon: ServerIcon,
                 color: "text-base-content",
             };
+        }
 
         return {
             ...stat,
