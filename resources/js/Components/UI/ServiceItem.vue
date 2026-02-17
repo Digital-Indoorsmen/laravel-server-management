@@ -53,10 +53,11 @@ const handleControl = (action) => {
                     class="h-5 w-5 text-warning animate-pulse"
                 />
             </div>
-            <div>
+            <div class="flex-1 min-w-0">
                 <div class="font-bold text-sm">{{ name }}</div>
                 <div
-                    class="text-[10px] opacity-50 uppercase tracking-wider font-semibold"
+                    class="text-[10px] opacity-50 uppercase tracking-wider font-semibold truncate max-w-xs"
+                    :title="version || 'Installed'"
                 >
                     {{ version || "Installed" }}
                 </div>
